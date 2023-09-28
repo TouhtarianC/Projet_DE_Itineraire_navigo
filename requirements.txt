@@ -1,0 +1,16 @@
+fastapi[all]~=0.100.1
+jinja2
+pydantic~=2.1.1
+uvicorn
+python-decouple
+neo4j~=5.11.0
+dash~=2.11.1
+plotly~=5.15.0
+setuptools~=65.5.1
+pandas~=2.0.3
+Flask~=2.2.5
+dash-leaflet
+SQLAlchemy~=2.0.20
+PyMySQL
+sqlalchemy-utils
+requests~=2.31.0

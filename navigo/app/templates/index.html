@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trip Planner</title>
+    <link rel="icon" href="/static/img/favicon.ico" type="image/x-icon">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-image: url('/static/img/background.png');
+            /*background-size: contain;*/
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+        .container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            text-align: center;
+            color: #f39c12;
+            margin-bottom: 30px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button[type="submit"] {
+            background-color: #f39c12;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button[type="submit"]:hover {
+            background-color: #e67e22;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Trip Planner</h1>
+        <form id="tripForm">
+        <label for="trip_zone">Trip Zone:</label>
+        <input type="number" name="trip_zone" id="trip_zone" value="33000" required>
+        <br>
+
+        <label for="trip_start">Trip Start:</label>
+        <input type="date" name="trip_start" id="trip_start" value="{{ today_date }}" required>
+        <br>
+
+        <label for="trip_duration">Trip Duration (days):</label>
+        <input type="number" name="trip_duration" id="trip_duration" value="7" required>
+        <br>
+
+        <label for="favorite_poi_categories">Favorite POI Categories (comma-separated):</label>
+        <input type="text" name="favorite_poi_categories" id="favorite_poi_categories" value="X, Y, Z">
+        <br>
+
+        <label for="favorite_restaurant_categories">Favorite Restaurant Categories (comma-separated):</label>
+        <input type="text" name="favorite_restaurant_categories" id="favorite_restaurant_categories" value="restaurant, bar, fast_food">
+        <br>
+
+        <label for="favorite_hosting_categories">Favorite Hosting Categories (comma-separated):</label>
+        <input type="text" name="favorite_hosting_categories" id="favorite_hosting_categories" value="hotel, camp_site, guest_house">
+        <br>
+
+        <label for="meantime_on_poi">Meantime on POI (days):</label>
+        <input type="number" step="0.1" name="meantime_on_poi" id="meantime_on_poi" value="0.5">
+        <br>
+
+        <label for="minimal_notation">Minimal Notation (out of 5):</label>
+        <input type="number" name="minimal_notation" id="minimal_notation" value="3">
+        <br>
+
+        <label for="means_of_transport">Means of Transport:</label>
+        <select name="means_of_transport" id="means_of_transport">
+            <option value="by foot">By Foot</option>
+            <option value="car">Car</option>
+            <option value="public transport">Public Transport</option>
+        </select>
+        <br>
+
+        <label for="sensitivity_to_weather">Sensitivity to Weather (0: non-sensitive):</label>
+        <input type="number" step="0.1" name="sensitivity_to_weather" id="sensitivity_to_weather" value="0.5">
+        <br>
+
+        <label for="days_on_hiking">Days on Hiking (days):</label>
+        <input type="number" name="days_on_hiking" id="days_on_hiking" value="2">
+        <br>
+
+        <button type="submit" id="submitBtn">Plan My Trip</button>
+    </form>
+    </div>
+    <script>
+        const submitBtn = document.getElementById('submitBtn');
+        const tripForm = document.getElementById('tripForm');
+
+        submitBtn.addEventListener('click', async (event) => {
+            event.preventDefault(); // Prevent the default form submission
+
+            const formData = new FormData(tripForm);
+            const formDataObject = {};
+            formData.forEach((value, key) => {
+                formDataObject[key] = value;
+            });
+
+            const response = await fetch('/recommendations/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formDataObject)
+            });
+
+            const result = await response.json();
+            console.log(result);
+
+            // Redirect the user to the /dash endpoint
+            window.location.href = '/dash';
+        });
+    </script>
+</body>
+</html>
