@@ -6,15 +6,14 @@ class GeospatialPoint:
     longitude: float
     latitude: float
 
-    name: str
-
     city: str
     city_code: int
 
     type: str
+    name: str = ""
 
     category: str = ""
-    notation: float = 3
+    notation: float = 0
     score: float = 0.0
 
 
@@ -23,9 +22,29 @@ class POI(GeospatialPoint):
     type: str = "POI"
 
 
+def db_raw_to_poi(db_raw: dict) -> POI:
+    return POI(
+        longitude=db_raw['LONGITUDE'],
+        latitude=db_raw['LATITUDE'],
+        name=db_raw['NAME'],  # todo verify
+        city=db_raw['CITY'],
+        city_code=db_raw['POSTAL_CODE'],
+    )
+
+
 @dataclass
 class Restaurant(GeospatialPoint):
     type: str = "Restaurant"
+
+
+def db_raw_to_restaurant(db_raw: dict) -> Restaurant:
+    return Restaurant(
+        longitude=db_raw['LONGITUDE'],
+        latitude=db_raw['LATITUDE'],
+        name=db_raw['NAME'],
+        city=db_raw['CITY'],
+        city_code=db_raw['POSTAL_CODE'],
+    )
 
 
 @dataclass
@@ -33,9 +52,44 @@ class Hosting(GeospatialPoint):
     type: str = "Hosting"
 
 
+def db_raw_to_hosting(db_raw: dict) -> Hosting:
+    return Hosting(
+        longitude=db_raw['LONGITUDE'],
+        latitude=db_raw['LATITUDE'],
+        name=db_raw['NAME'],
+        city=db_raw['CITY'],
+        city_code=db_raw['POSTAL_CODE'],
+    )
+
+
 @dataclass
 class Trail(GeospatialPoint):
     type: str = "Trail"
+
+
+def db_raw_to_trail(db_raw: dict) -> Trail:
+    return Trail(
+        longitude=db_raw['LONGITUDE'],
+        latitude=db_raw['LATITUDE'],
+        name=db_raw['NAME'],  # verify
+        city=db_raw['CITY'],
+        city_code=db_raw['POSTAL_CODE'],
+    )
+
+
+@dataclass
+class WC(GeospatialPoint):
+    type: str = "POI"
+    name: str = "WC"
+
+
+def db_raw_to_wc(db_raw: dict) -> WC:
+    return WC(
+        longitude=db_raw['LONGITUDE'],
+        latitude=db_raw['LATITUDE'],
+        city=db_raw['CITY'],
+        city_code=db_raw['POSTAL_CODE'],
+    )
 
 
 @dataclass
@@ -56,8 +110,8 @@ class UserData:
 @dataclass
 class ExternalData:
     weather_forecast: dict[str, dict[str, int]]
-    top_poi_list: list[POI]  # Replace with actual POI class definition
-    top_restaurant_list: list[Restaurant]  # Replace with actual Restaurant class definition
+    top_poi_list: list[POI]
+    top_restaurant_list: list[Restaurant]
 
 
 @dataclass
@@ -70,11 +124,10 @@ class InternalNodesData:
     def get_all_nodes(self):
         return self.poi_list + self.restaurant_list + self.hosting_list + self.trail_list
 
-    def select_top_points(self, max_points_to_visit):
-        # select the top points based on the score
+    def get_sorted_points(self):
         return (
-            sorted(self.poi_list, key=lambda x: x.score, reverse=True)[:max_points_to_visit],
-            sorted(self.restaurant_list, key=lambda x: x.score, reverse=True)[:max_points_to_visit],
-            sorted(self.hosting_list, key=lambda x: x.score, reverse=True)[:max_points_to_visit],
-            sorted(self.trail_list, key=lambda x: x.score, reverse=True)[:max_points_to_visit]
+            sorted(self.poi_list, key=lambda x: x.score, reverse=True),
+            sorted(self.restaurant_list, key=lambda x: x.score, reverse=True),
+            sorted(self.hosting_list, key=lambda x: x.score, reverse=True),
+            sorted(self.trail_list, key=lambda x: x.score, reverse=True)
         )
