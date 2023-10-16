@@ -11,14 +11,12 @@ def _plan_trip(_user_input: UserData, internal_nodes_data: InternalNodesData, _e
     for node in internal_nodes_data.get_all_nodes():
         node.score = compute_score(node, _user_input, _external_data)
 
-    # Step 4: Compute the maximum points that can be visited
-    max_points_to_visit = int(_user_input.trip_duration / _user_input.meantime_on_poi)
-
-    # Step 5: Selection of top ones
+    # Step 5: Get sorted nodes
     selected_poi, selected_restaurants, selected_hosting, selected_trails \
-        = internal_nodes_data.select_top_points(max_points_to_visit)
+        = internal_nodes_data.get_sorted_points()
 
     # Step 6: compute itinerary
+    # todo do clustering here ?
     itinerary = compute_itinerary(selected_poi, selected_restaurants, selected_hosting, selected_trails)
 
     return itinerary
@@ -27,7 +25,7 @@ def _plan_trip(_user_input: UserData, internal_nodes_data: InternalNodesData, _e
 def plan_trip(_user_input: UserData):
 
     # Step 1: Geographic Selection of POI, Restaurant, Hosting, and Trail
-    internal_nodes_data = get_db_internal_nodes_data_by_zone(_user_input.trip_zone)
+    internal_nodes_data = get_db_internal_nodes_data_by_zone(_user_input.trip_zone, _user_input.trip_duration)
 
     # Step 2: Fetch needed external Data
     _external_data = get_external_data(_user_input.trip_zone)
