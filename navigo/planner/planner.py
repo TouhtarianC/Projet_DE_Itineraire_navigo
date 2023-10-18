@@ -41,7 +41,7 @@ if __name__ == "__main__":
         favorite_poi_categories=["museum", "park", "historical"],
         favorite_restaurant_categories=["italian", "asian"],
         favorite_hosting_categories=["hotel", "bnb"],
-        sensitivity_to_weather=0.5,
+        sensitivity_to_weather=True,
     )
     internal_data = InternalNodesData(
         poi_list=[],
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         trail_list=[]
     )
     external_data = ExternalData(
-        weather_forecast={"Paris": {"rain": False, "temperature": 25}},
+        weather_forecast=True,
         top_poi_list=[...],  # Replace with actual data
         top_restaurant_list=[...],  # Replace with actual data
     )

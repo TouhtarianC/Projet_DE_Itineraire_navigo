@@ -12,6 +12,15 @@ class ScoringRules:
         self.weather_weight = weather_weight
 
 
+def is_internal_activity(activity_type_name: str):
+    """
+    return true if activity_type_name is considered as internal activity
+    """
+    internal_activities_types = []
+
+    return activity_type_name in internal_activities_types
+
+
 def compute_score(point: GeospatialPoint, user_input: UserData, external_data: ExternalData, rules=ScoringRules()):
     score = 0
 
@@ -27,6 +36,16 @@ def compute_score(point: GeospatialPoint, user_input: UserData, external_data: E
             index = next((i for i, p in enumerate(external_data.top_poi_list) if p.name == point.name.lower()))
             score += rules.popularity_weight * (
                     len(external_data.top_poi_list) - index)
+
+        # boost external activities if weather is good else internal
+        if user_input.sensitivity_to_weather:
+            if external_data.weather_forecast:
+                if not is_internal_activity(point.category.lower()):
+                    score += rules.weather_weight
+
+            else:
+                if is_internal_activity(point.category.lower()):
+                    score += rules.weather_weight
 
     if point.type == "Restaurant":
         # boost user preferences
@@ -52,10 +71,5 @@ def compute_score(point: GeospatialPoint, user_input: UserData, external_data: E
     if point.notation > 0:
         if point.notation > user_input.minimal_notation:
             score += rules.notation_weight * (point.notation - user_input.minimal_notation)
-
-    # boost weather
-    if user_input.sensitivity_to_weather:
-        weather_notation = external_data.weather_forecast.get(point.city.lower(), {}).get('score', 0)
-        score += rules.weather_weight * weather_notation
 
     return score

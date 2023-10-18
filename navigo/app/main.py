@@ -59,7 +59,7 @@ class UserTripRequestInput(BaseModel):
     meantime_on_poi: str
     minimal_notation: str
     means_of_transport: str
-    sensitivity_to_weather: str
+    sensitivity_to_weather: bool
     days_on_hiking: str
 
     def to_user_data(self) -> UserData:
@@ -73,12 +73,13 @@ class UserTripRequestInput(BaseModel):
             meantime_on_poi=float(self.meantime_on_poi),
             minimal_notation=int(self.minimal_notation),
             means_of_transport=self.means_of_transport,
-            sensitivity_to_weather=float(self.sensitivity_to_weather),
+            sensitivity_to_weather=self.sensitivity_to_weather,
             days_on_hiking=float(self.days_on_hiking)
         )
 
 
 # todo: add api de plannnification de trip mais retour json
+# todo : integrate city to code postal
 # POST endpoint to get recommendations
 @app.post("/recommendations/")
 async def create_trip_recommendations(user_request_input: UserTripRequestInput):

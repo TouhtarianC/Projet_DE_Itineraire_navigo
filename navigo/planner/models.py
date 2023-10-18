@@ -103,13 +103,13 @@ class UserData:
     meantime_on_poi: float = 0.5
     minimal_notation: int = 3
     means_of_transport: str = "BY_FOOT"
-    sensitivity_to_weather: float = 0.5
+    sensitivity_to_weather: bool = True
     days_on_hiking: float = 0
 
 
 @dataclass
 class ExternalData:
-    weather_forecast: dict[str, dict[str, int]]
+    weather_forecast: bool  # True if weather is good => boost external activities
     top_poi_list: list[POI]
     top_restaurant_list: list[Restaurant]
 
