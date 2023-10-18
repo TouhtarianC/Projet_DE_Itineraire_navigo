@@ -5,6 +5,7 @@ import requests
 from sqlalchemy import create_engine, text
 from sqlalchemy_utils import database_exists
 
+from navigo.external.manager import get_nearby_communes
 from navigo.planner.models import InternalNodesData, POI, db_raw_to_poi, db_raw_to_restaurant, db_raw_to_hosting, \
     db_raw_to_trail, db_raw_to_wc
 from navigo.settings import MARIADB_USER, MARIADB_PWD, MARIADB_HOST, MARIADB_DB, MARIADB_POI_TABLE, \
@@ -18,38 +19,6 @@ logger = logging.getLogger(__name__)
 
 class DBManagerException(Exception):
     pass
-
-
-def get_nearby_communes(postal_code, rayon=10) -> list:
-    """
-    Returns a list of the first "top" elements from the list returned by the API villes-voisines.fr
-
-    Args:
-        postal_code: The postal code of the commune to search for.
-        rayon: The search radius in kilometers.
-        _top: The number of elements to return.
-
-    Returns:
-        A list of postal codes.
-    """
-
-    url = f"https://www.villes-voisines.fr/getcp.php?cp={postal_code}&rayon={rayon}"
-    response = requests.get(url)
-    data = json.loads(response.content)
-    logger.info(f"Villes voisines: {json.dumps(data, indent=4)}")
-
-    if isinstance(data, dict):
-        communes = list(data.values())
-    else:
-        communes = data
-
-    res = list(
-        set(
-            [int(commune["code_postal"]) for commune in communes]
-        )
-    )
-
-    return res
 
 
 def get_nearby_communes_as_where_clause(postal_code, rayon=10) -> str:
