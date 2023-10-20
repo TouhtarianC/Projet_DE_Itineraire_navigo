@@ -1,64 +1,81 @@
+import requests
+import pandas as pd
+from dataclasses import dataclass
+from datetime import datetime
+
 from navigo.planner.models import ExternalData
 
 
-def get_weather_forecast(ville, start_date, end_date):
+
+@dataclass
+class WeatherRequest:
+    ville: str
+    start_date: datetime
+    end_date: datetime
+    
+def fetch_weather_data(ville):
     '''
-    fFnction that takes a city name and travel start and end dates, and returns True if the weather is favorable.during the specified period, and False otherwise. 
-    Weather is considered favorable if there is little to no rain and temperature between 10 and 30°.
-    If, for any reasy, there is no weather information available, returns True()."
+    Fetch weather data from OpenWeatherMap API for a given city.
+    Returns a DataFrame containing the raw weather data.
     '''
     KEY = "bd5e378503939ddaee76f12ad7a97608"
     url = f"https://api.openweathermap.org/data/2.5/forecast/daily?q={ville}&cnt=16&appid={KEY}&units=metric"
-    
+
     try:
         response = requests.get(url)
         response.raise_for_status()
         data_dict = response.json()
         normalized_data = pd.json_normalize(data_dict).list[0]
-        df_brut = pd.DataFrame(normalized_data)
-
-        # conversion date unix en date
-        df_brut["date"] = pd.to_datetime(df_brut["dt"], unit='s')
-        # température ressentie
-        df_brut["tempRessentie"] = df_brut["feels_like"].apply(lambda x: round(x["day"]))
-        # ID et description de la météo
-        df_brut[["idTemps", "tempsPrevu"]] = df_brut["weather"].apply(lambda x: pd.Series((x[0]["id"], x[0]["description"])))
-        # url : https://openweathermap.org/weather-conditions
-        # si la météo est clémente. Si un peu de pluie (id = 500) on dit que c'est clément
-        df_brut["condition"] = df_brut.apply(lambda row: (row['idTemps'] >= 800 and 10 <= row['tempRessentie'] <= 30) or row['idTemps'] == 500, axis=1)
-
-        # Df avec les infos qui m'intéressent
-        df_filtered = df_brut[['date', 'tempRessentie', 'idTemps', 'tempsPrevu', 'condition']]
-
-        start_date = pd.Timestamp(start_date)
-        # ajout d'une journée poru avoir le premier jour
-        end_date = pd.Timestamp(end_date) + pd.Timedelta(seconds=86400)
-        
-        filtered_data = df_filtered[(df_filtered['date'] >= start_date)& (df_filtered['date'] <= end_date)]
-
-        # Afficher pour un log / vérif
-        for index, row in filtered_data.iterrows():
-            date = row['date'].strftime('%Y-%m-%d')
-            temperature = row['tempRessentie']
-            id_temps = row['idTemps']
-            clemente = row['condition']
-            city = ville 
-            
-            result = [date, city, temperature, id_temps, clemente]
-            print(result)
-        
-        #print(filtered_data['condition'])
-        result = all(filtered_data['condition'])
-        # si des prévision sont absentes, renvoie True
-        return result
-
-
+        return pd.DataFrame(normalized_data)
     except requests.exceptions.RequestException as e:
-        print(f"Erreur lors de la récupération des données : {e}")
+        print(f"Error fetching weather data: {e}")
+        return None
+
+def preprocess_weather_data(df):
+    '''
+    Preprocess the raw weather data DataFrame.
+    Returns a DataFrame with relevant columns.
+    '''
+    df["date"] = pd.to_datetime(df["dt"], unit='s')
+    df["tempRessentie"] = df["feels_like"].apply(lambda x: round(x["day"]))
+    df[["idTemps", "tempsPrevu"]] = df["weather"].apply(lambda x: pd.Series((x[0]["id"], x[0]["description"])))
+    df["condition"] = df.apply(lambda row: (row['idTemps'] >= 800 and 10 <= row['tempRessentie'] <= 30) or row['idTemps'] == 500, axis=1)
+    return df[['date', 'tempRessentie', 'idTemps', 'tempsPrevu', 'condition']]
+
+    
+def get_weather_forecast(request: WeatherRequest):
+    '''
+    Function that takes a WeatherRequest object with a city name, travel start and end dates.
+    Returns True if the weather is favorable during the specified period, and False otherwise.
+    
+    Weather is considered favorable if there is little to no rain and temperature between 10 and 30°.
+    If weather data is unavailable, returns True.
+    '''
+    weather_data = fetch_weather_data(request.ville)
+    if weather_data is None:
         return True
-    except ValueError as e:
-        print(f"Erreur lors de la conversion des données : {e}")
-        return True
+
+    print(request)
+    
+    preprocessed_data = preprocess_weather_data(weather_data)
+    #print(preprocessed_data)
+    
+    end_date_recalculated = request.end_date + pd.Timedelta(days=1)
+    filtered_conditions = preprocessed_data[(preprocessed_data['date'] >= request.start_date) & (preprocessed_data['date'] <= end_date_recalculated)].copy()
+    filtered_conditions['filtered_date'] = filtered_conditions['date'].dt.strftime('%Y-%m-%d')
+    filtered_conditions = filtered_conditions[['filtered_date', 'tempRessentie', 'idTemps', 'condition']]
+    print(f"filtered_conditions :\n{filtered_conditions}")
+    if filtered_conditions.empty:
+        final_result = True
+    else:
+        final_result = all(filtered_conditions['condition'])
+    
+    # print(final_result)
+    #print(request.start_date)
+    #print(request.end_date)
+    
+    print(f"Résultat final : {final_result}")
+    return final_result
 
 
 def get_most_popular_poi_by_zone(zone: int) -> list:
