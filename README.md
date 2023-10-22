@@ -68,15 +68,21 @@ Compute a score for each point
 start with a zero score
 
 if point is of type POI: 
-    if category of POI is in list of favorite categories of POI: 
+    if category of POI is in the list of favorite categories of POI: 
         increment score by 10 * (length of list - index of category in list)
+
+    if point is present in the list of most popular POI:
+        increment score by 10 * (length of list - index of POI in list)
 
 if point is of type Restaurant: 
-    if category of Restaurant is in list of favorite categories of Restaurant: 
+    if category of Restaurant is in the list of favorite categories of Restaurant: 
         increment score by 10 * (length of list - index of category in list)
 
+    if point is present in the list of most popular Restaurants:
+        increment score by 10 * (length of list - index of Restaurant in list)
+
 if point is of type Hosting: 
-    if category of Hosting is in list of favorite categories of Hosting: 
+    if category of Hosting is in the list of favorite categories of Hosting: 
         increment score by 10 * (length of list - index of category in list)
 
 if point has non-zero notation:
