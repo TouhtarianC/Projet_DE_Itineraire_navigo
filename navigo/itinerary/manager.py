@@ -86,7 +86,7 @@ def compute_itinerary(selected_poi: list[POI], selected_restaurants: list[Restau
 
     # todo verify this
     # clear all nodes
-    clear_nodes()
+    # clear_nodes()
 
     # create all nodes
     create_nodes(selected_poi, selected_restaurants, selected_hosting, selected_trails)

@@ -122,7 +122,7 @@ def get_nearby_communes(postal_code, rayon=10) -> list:
     return res
 
 
-def get_zipcode(city_name: str):
+def get_zipcode(city_name: str) -> int:
     """
     Queries the Vicopo API to get the zip code of a given city.
 

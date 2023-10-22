@@ -12,7 +12,7 @@ from navigo.settings import MARIADB_USER, MARIADB_PWD, MARIADB_HOST, MARIADB_DB,
     MARIADB_RESTAURANT_TABLE, MARIADB_HOSTING_TABLE, MARIADB_TRAIL_TABLE, MARIADB_WC_TABLE, \
     MIN_FETCHED_POI_BY_ZONE_PER_DAY, LOOKUP_ITERATIONS_RADIUS_INIT, MAX_LOOKUP_ITERATIONS_FOR_POINTS, \
     LOOKUP_ITERATIONS_RADIUS_STEP, MIN_FETCHED_RESTAURANT_BY_ZONE_PER_DAY, MIN_FETCHED_HOSTING_BY_ZONE_PER_DAY, \
-    MIN_FETCHED_TRAIL_BY_ZONE_PER_DAY, MIN_FETCHED_WC_BY_ZONE_PER_DAY
+    MIN_FETCHED_TRAIL_BY_ZONE_PER_DAY, MIN_FETCHED_WC_BY_ZONE_PER_DAY, MARIADB_POI_TYPE_TABLE, MARIADB_POI_THEME_TABLE
 
 logger = logging.getLogger(__name__)
 
@@ -198,3 +198,35 @@ def get_db_internal_nodes_data_by_zone(zone: int, days: int = 1) -> InternalNode
 #         hosting_list=[],
 #         trail_list=[]
 #     )
+
+
+def get_poi_types() -> list:
+    poi_types = []
+    with engine.begin() as con:
+        query = text(
+            f"""SELECT * FROM {MARIADB_POI_TYPE_TABLE}"""
+        )
+        res = con.execute(query)
+        poi_types = [{r.meta_key: r.meta_value for r in res if r.meta_key}]
+
+    # todo: change values
+    if poi_types and not poi_types[0]:
+        poi_types = [{'NAME': 'parc'}, {'NAME': 'museum'}, {'NAME': 'stadium'}, {'NAME': 'jardin'}]
+
+    return poi_types
+
+
+def get_poi_themes() -> list:
+    poi_themes = []
+    with engine.begin() as con:
+        query = text(
+            f"""SELECT * FROM {MARIADB_POI_THEME_TABLE}"""
+        )
+        res = con.execute(query)
+        poi_themes = [{r.meta_key: r.meta_value for r in res if r.meta_key}]
+
+    # todo: change values
+    if poi_themes and not poi_themes[0]:
+        poi_themes = [{'NAME': 'red'}, {'NAME': 'blue'}, {'NAME': 'green'}, {'NAME': 'black'}]
+
+    return poi_themes

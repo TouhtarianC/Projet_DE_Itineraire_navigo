@@ -16,6 +16,10 @@ class GeospatialPoint:
     notation: float = 0
     score: float = 0.0
 
+    uuid: str = ""
+    cluster: int | None = None
+    rank: int | None = None
+
 
 @dataclass
 class POI(GeospatialPoint):
@@ -97,12 +101,14 @@ class UserData:
     trip_zone: int = 33
     trip_start: str = None
     trip_duration: int = 7
-    favorite_poi_categories: list[str] = field(default_factory=list)
+    # favorite_poi_categories: list[str] = field(default_factory=list)
+    favorite_poi_type_list: list[str] = field(default_factory=list)
+    favorite_poi_theme_list: list[str] = field(default_factory=list)
     favorite_restaurant_categories: list[str] = field(default_factory=list)
     favorite_hosting_categories: list[str] = field(default_factory=list)
-    meantime_on_poi: float = 0.5
-    minimal_notation: int = 3
-    means_of_transport: str = "BY_FOOT"
+    # meantime_on_poi: float = 0.5
+    # minimal_notation: int = 3
+    means_of_transport: str = "by foot"
     sensitivity_to_weather: bool = True
     days_on_hiking: float = 0
 
@@ -130,4 +136,22 @@ class InternalNodesData:
             sorted(self.restaurant_list, key=lambda x: x.score, reverse=True),
             sorted(self.hosting_list, key=lambda x: x.score, reverse=True),
             sorted(self.trail_list, key=lambda x: x.score, reverse=True)
+        )
+
+    def select_top_points_by_day(self, nb_days: int, max_pois_by_day: int):
+        # select the top points for each cluster based on the score
+        result_list = []
+        for d in range(nb_days):
+            my_list = [poi for poi in self.poi_list if poi.cluster == d]
+            for res in sorted(my_list, key=lambda x: x.score, reverse=True)[:max_pois_by_day]:
+                result_list.append(res)
+        return result_list
+
+    def select_best(self):
+        """return the object with best score level"""
+        return (
+            sorted(self.poi_list, key=lambda x: x.score, reverse=True)[0],
+            sorted(self.restaurant_list, key=lambda x: x.score, reverse=True)[0],
+            sorted(self.hosting_list, key=lambda x: x.score, reverse=True)[0],
+            sorted(self.trail_list, key=lambda x: x.score, reverse=True)[0]
         )

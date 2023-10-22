@@ -26,10 +26,10 @@ def compute_score(point: GeospatialPoint, user_input: UserData, external_data: E
 
     if point.type == "POI":
         # boost user preferences
-        if point.category.lower() in user_input.favorite_poi_categories:
-            index = user_input.favorite_poi_categories.index(point.category)
+        if point.category.lower() in user_input.favorite_poi_type_list:
+            index = user_input.favorite_poi_type_list.index(point.category)
             score += rules.user_preference_weight * (
-                        len(user_input.favorite_poi_categories) - index)
+                        len(user_input.favorite_poi_type_list) - index)
 
         # boost most popular POI
         if point.name.lower() in [p.name for p in external_data.top_poi_list]:
@@ -67,9 +67,9 @@ def compute_score(point: GeospatialPoint, user_input: UserData, external_data: E
             score += rules.user_preference_weight * (
                         len(user_input.favorite_hosting_categories) - index)
 
-    # boost notation
-    if point.notation > 0:
-        if point.notation > user_input.minimal_notation:
-            score += rules.notation_weight * (point.notation - user_input.minimal_notation)
+    # # boost notation
+    # if point.notation > 0:
+    #     if point.notation > user_input.minimal_notation:
+    #         score += rules.notation_weight * (point.notation - user_input.minimal_notation)
 
     return score
