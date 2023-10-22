@@ -46,7 +46,7 @@ def plan_trip(_user_input: UserData):
     internal_nodes_data = get_db_internal_nodes_data_by_zone(_user_input.trip_zone, _user_input.trip_duration)
 
     # Step 2: Fetch needed external Data
-    _external_data = get_external_data(_user_input.trip_zone)
+    _external_data = get_external_data(_user_input.trip_zone, _user_input.trip_start, _user_input.trip_duration)
 
     return _plan_trip(_user_input, internal_nodes_data, _external_data)
 

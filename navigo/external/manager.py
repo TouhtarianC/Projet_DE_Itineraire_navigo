@@ -1,4 +1,5 @@
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 import json
 import logging
 
@@ -17,7 +18,8 @@ class WeatherRequest:
     ville: str
     start_date: datetime
     end_date: datetime
-    
+
+
 def fetch_weather_data(ville):
     '''
     Fetch weather data from OpenWeatherMap API for a given city.
@@ -33,8 +35,9 @@ def fetch_weather_data(ville):
         normalized_data = pd.json_normalize(data_dict).list[0]
         return pd.DataFrame(normalized_data)
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching weather data: {e}")
+        logger.error(f"Error fetching weather data: {e}")
         return None
+
 
 def preprocess_weather_data(df):
     '''
@@ -60,27 +63,38 @@ def get_weather_forecast(request: WeatherRequest):
     if weather_data is None:
         return True
 
-    print(request)
+    logger.info(request)
     
     preprocessed_data = preprocess_weather_data(weather_data)
-    #print(preprocessed_data)
-    
+
     end_date_recalculated = request.end_date + pd.Timedelta(days=1)
     filtered_conditions = preprocessed_data[(preprocessed_data['date'] >= request.start_date) & (preprocessed_data['date'] <= end_date_recalculated)].copy()
     filtered_conditions['filtered_date'] = filtered_conditions['date'].dt.strftime('%Y-%m-%d')
     filtered_conditions = filtered_conditions[['filtered_date', 'tempRessentie', 'idTemps', 'condition']]
-    print(f"filtered_conditions :\n{filtered_conditions}")
+    logger.info(f"filtered_conditions :\n{filtered_conditions}")
     if filtered_conditions.empty:
         final_result = True
     else:
         final_result = all(filtered_conditions['condition'])
     
-    # print(final_result)
-    #print(request.start_date)
-    #print(request.end_date)
-    
-    print(f"Résultat final : {final_result}")
+    logger.info(f"Résultat final : {final_result}")
     return final_result
+
+
+def get_weather_forecast_by_zone(zone: int, trip_start: str, trip_duration: int) -> bool:
+    # todo => is it possible to take a zip code as input ?
+    ville = str(zone)
+
+    start = datetime.strptime(trip_start, "%Y-%m-%d")
+    end = start + timedelta(days=trip_duration)
+
+    return get_weather_forecast(
+        WeatherRequest(
+            ville=ville,
+            start_date=start,
+            end_date=end
+        )
+    )
 
 
 # todo fix category IDs
@@ -146,9 +160,9 @@ def get_most_popular_restaurant_by_zone(zip_code, limit=25, radius=50000) -> lis
     return restaurants
 
 
-def get_external_data(zone: int) -> ExternalData:
+def get_external_data(zone: int, trip_start: str, trip_duration: int) -> ExternalData:
     return ExternalData(
-        weather_forecast=get_weather_forecast_by_zone(zone),
+        weather_forecast=get_weather_forecast_by_zone(zone, trip_start, trip_duration),
         top_poi_list=get_most_popular_poi_by_zone(zone),
         top_restaurant_list=get_most_popular_restaurant_by_zone(zone)
     )
