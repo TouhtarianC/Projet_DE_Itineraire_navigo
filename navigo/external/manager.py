@@ -7,8 +7,10 @@ import pandas as pd
 import requests
 
 from navigo.planner.models import ExternalData, POI, Restaurant
-from navigo.settings import FOURESQUARE_API_CLIENT_ID, FOURESQUARE_API_CLIENT_SECRET, FOURESQUARE_API_URL, \
-    FOURESQUARE_POI_CATEGORY_ID, FOURESQUARE_RESTAURANT_CATEGORY_ID, FOURESQUARE_API_TOKEN
+from navigo.settings import FOURESQUARE_API_CLIENT_ID, \
+    FOURESQUARE_API_CLIENT_SECRET, FOURESQUARE_API_URL, \
+    FOURESQUARE_POI_CATEGORY_ID, FOURESQUARE_RESTAURANT_CATEGORY_ID, \
+    FOURESQUARE_API_TOKEN
 
 logger = logging.getLogger(__name__)
 
@@ -46,17 +48,24 @@ def preprocess_weather_data(df):
     '''
     df["date"] = pd.to_datetime(df["dt"], unit='s')
     df["tempRessentie"] = df["feels_like"].apply(lambda x: round(x["day"]))
-    df[["idTemps", "tempsPrevu"]] = df["weather"].apply(lambda x: pd.Series((x[0]["id"], x[0]["description"])))
-    df["condition"] = df.apply(lambda row: (row['idTemps'] >= 800 and 10 <= row['tempRessentie'] <= 30) or row['idTemps'] == 500, axis=1)
+    df[["idTemps", "tempsPrevu"]] = df["weather"].apply(
+        lambda x: pd.Series((x[0]["id"], x[0]["description"])))
+    df["condition"] = df.apply(lambda row: (
+        row['idTemps'] >= 800 and
+        10 <= row['tempRessentie'] <= 30) or
+        row['idTemps'] == 500, axis=1)
     return df[['date', 'tempRessentie', 'idTemps', 'tempsPrevu', 'condition']]
 
-    
+
 def get_weather_forecast(request: WeatherRequest):
     '''
-    Function that takes a WeatherRequest object with a city name, travel start and end dates.
-    Returns True if the weather is favorable during the specified period, and False otherwise.
-    
-    Weather is considered favorable if there is little to no rain and temperature between 10 and 30°.
+    Function that takes a WeatherRequest object with a city name,
+    travel start and end dates.
+    Returns True if the weather is favorable during the specified period,
+    and False otherwise.
+
+    Weather is considered favorable if there is little to no rain and
+    temperature between 10 and 30°.
     If weather data is unavailable, returns True.
     '''
     weather_data = fetch_weather_data(request.ville)
@@ -64,24 +73,30 @@ def get_weather_forecast(request: WeatherRequest):
         return True
 
     logger.info(request)
-    
+
     preprocessed_data = preprocess_weather_data(weather_data)
 
     end_date_recalculated = request.end_date + pd.Timedelta(days=1)
-    filtered_conditions = preprocessed_data[(preprocessed_data['date'] >= request.start_date) & (preprocessed_data['date'] <= end_date_recalculated)].copy()
-    filtered_conditions['filtered_date'] = filtered_conditions['date'].dt.strftime('%Y-%m-%d')
-    filtered_conditions = filtered_conditions[['filtered_date', 'tempRessentie', 'idTemps', 'condition']]
+    filtered_conditions = preprocessed_data[(
+        preprocessed_data['date'] >= request.start_date) & (
+        preprocessed_data['date'] <= end_date_recalculated)].copy()
+    filtered_conditions['filtered_date'] = filtered_conditions['date'].dt.\
+        strftime('%Y-%m-%d')
+    filtered_conditions = filtered_conditions[[
+        'filtered_date', 'tempRessentie', 'idTemps', 'condition']]
     logger.info(f"filtered_conditions :\n{filtered_conditions}")
     if filtered_conditions.empty:
         final_result = True
     else:
         final_result = all(filtered_conditions['condition'])
-    
+
     logger.info(f"Résultat final : {final_result}")
     return final_result
 
 
-def get_weather_forecast_by_zone(zone: int, trip_start: str, trip_duration: int) -> bool:
+def get_weather_forecast_by_zone(zone: int,
+                                 trip_start: str,
+                                 trip_duration: int) -> bool:
     # todo => is it possible to take a zip code as input ?
     ville = str(zone)
 
@@ -127,7 +142,8 @@ def explore_venues(zip_code, category_id, limit, radius) -> list:
 
 
 def get_most_popular_poi_by_zone(zip_code, limit=25, radius=50000) -> list:
-    raw_pois = explore_venues(zip_code, FOURESQUARE_POI_CATEGORY_ID, limit, radius)
+    raw_pois = explore_venues(
+        zip_code, FOURESQUARE_POI_CATEGORY_ID, limit, radius)
     pois = [
         POI(
             longitude=float(result["geocodes"]["main"]["longitude"]),
@@ -139,12 +155,20 @@ def get_most_popular_poi_by_zone(zip_code, limit=25, radius=50000) -> list:
         )
         for result in raw_pois
     ]
-
+    logger.info(f"nb of most popular poi: {len(pois)}")
     return pois
 
 
-def get_most_popular_restaurant_by_zone(zip_code, limit=25, radius=50000) -> list:
-    raw_restaurants = explore_venues(zip_code, FOURESQUARE_RESTAURANT_CATEGORY_ID, limit, radius)
+def get_most_popular_restaurant_by_zone(
+        zip_code,
+        limit=25,
+        radius=50000) -> list:
+
+    raw_restaurants = explore_venues(
+        zip_code,
+        FOURESQUARE_RESTAURANT_CATEGORY_ID,
+        limit,
+        radius)
     restaurants = [
         Restaurant(
             longitude=result["geocodes"]["main"]["longitude"],
@@ -156,13 +180,17 @@ def get_most_popular_restaurant_by_zone(zip_code, limit=25, radius=50000) -> lis
         )
         for result in raw_restaurants
     ]
-
+    
+    logger.info(f"nb of most popular restaurants: {len(restaurants)}")
     return restaurants
 
 
-def get_external_data(zone: int, trip_start: str, trip_duration: int) -> ExternalData:
+def get_external_data(zone: int,
+                      trip_start: str,
+                      trip_duration: int) -> ExternalData:
     return ExternalData(
-        weather_forecast=get_weather_forecast_by_zone(zone, trip_start, trip_duration),
+        weather_forecast=get_weather_forecast_by_zone(
+            zone, trip_start, trip_duration),
         top_poi_list=get_most_popular_poi_by_zone(zone),
         top_restaurant_list=get_most_popular_restaurant_by_zone(zone)
     )
@@ -172,7 +200,7 @@ def get_external_data(zone: int, trip_start: str, trip_duration: int) -> Externa
 # helper APIs to work with cities and zip codes
 ################################################
 
-def get_nearby_communes(postal_code, rayon=10) -> list:
+def get_nearby_communes(postal_code, rayon=10, _top=15) -> list:
     """
     Returns a list of the first "top" elements from the list returned by the API villes-voisines.fr
 
@@ -185,10 +213,13 @@ def get_nearby_communes(postal_code, rayon=10) -> list:
         A list of postal codes.
     """
 
+    # ToDo : actuellement retourne 5 villes aux hasard dans la liste
+    # des villes retournées => à modifier pour retourner les 5 plus proches
+
     url = f"https://www.villes-voisines.fr/getcp.php?cp={postal_code}&rayon={rayon}"
     response = requests.get(url)
     data = json.loads(response.content)
-    logger.info(f"Villes voisines: {json.dumps(data, indent=4)}")
+    #logger.info(f"Villes voisines: {json.dumps(data, indent=4)}")
 
     if isinstance(data, dict):
         communes = list(data.values())
@@ -201,7 +232,10 @@ def get_nearby_communes(postal_code, rayon=10) -> list:
         )
     )
 
-    return res
+    if len(res) >= 15:
+        return res[:_top]
+    else:
+        return res
 
 
 def get_zipcode(city_name: str) -> int:
