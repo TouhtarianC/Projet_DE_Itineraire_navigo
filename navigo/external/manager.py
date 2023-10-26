@@ -100,8 +100,9 @@ def get_weather_forecast_by_zone(zone: int,
                                  trip_start: str,
                                  trip_duration: int) -> bool:
     # todo => is it possible to take a zip code as input ?
-    ville = str(zone)
-
+    # logger.info(f"get_weather_forecast_by_zone zone: {zone}")
+    ville = get_cityname(zone)
+    logger.info(f"get_weather_forecast_by_zone ville: {ville}")
     start = datetime.strptime(trip_start, "%Y-%m-%d")
     end = start + timedelta(days=trip_duration)
 
@@ -116,17 +117,24 @@ def get_weather_forecast_by_zone(zone: int,
 
 # todo fix category IDs
 # Foursquare APIs
-def explore_venues(zip_code, category_id, limit, radius) -> list:
+
+def explore_venues(city_name, category_id, limit, radius) -> list:
     client = requests.Session()
-    client.headers['Authorization'] = FOURESQUARE_API_TOKEN
+    # client.headers['Authorization'] = FOURESQUARE_API_TOKEN
+    # # add 'Accept-Language': 'fr' into header of request to get french results
+    # client.headers['Accept-Language'] = 'fr'
 
     response = client.get(
         FOURESQUARE_API_URL,
+        headers={
+            'Authorization': FOURESQUARE_API_TOKEN,
+            'Accept-Language': 'fr'
+        },
         params={
             'client_id': FOURESQUARE_API_CLIENT_ID,
             'client_secret': FOURESQUARE_API_CLIENT_SECRET,
             'v': '20220101',
-            'near': zip_code,
+            'near': city_name + '_FR',
             'categoryId': category_id,
             'limit': limit,
             # 'radius': radius,
@@ -144,8 +152,10 @@ def explore_venues(zip_code, category_id, limit, radius) -> list:
 
 
 def get_most_popular_poi_by_zone(zip_code, limit=25, radius=50000) -> list:
+    city_name = get_cityname(zip_code)
     raw_pois = explore_venues(
-        zip_code, FOURESQUARE_POI_CATEGORY_ID, limit, radius)
+        city_name, FOURESQUARE_POI_CATEGORY_ID, limit, radius)
+    #logger.info(f"raw_pois: {raw_pois}")
     pois = [
         POI(
             longitude=float(result["geocodes"]["main"]["longitude"]),
@@ -166,8 +176,9 @@ def get_most_popular_restaurant_by_zone(
         limit=25,
         radius=50000) -> list:
 
+    city_name = get_cityname(zip_code)
     raw_restaurants = explore_venues(
-        zip_code,
+        city_name,
         FOURESQUARE_RESTAURANT_CATEGORY_ID,
         limit,
         radius)
@@ -182,7 +193,7 @@ def get_most_popular_restaurant_by_zone(
         )
         for result in raw_restaurants
     ]
-    
+
     logger.info(f"nb of most popular restaurants: {len(restaurants)}")
     return restaurants
 
@@ -202,14 +213,13 @@ def get_external_data(zone: int,
 # helper APIs to work with cities and zip codes
 ################################################
 
-def get_nearby_communes(postal_code, rayon=10, _top=15) -> list:
+def get_nearby_communes(postal_code, rayon=10) -> list:
     """
-    Returns a list of the first "top" elements from the list returned by the API villes-voisines.fr
+    Returns a list of city returned by the API villes-voisines.fr
 
     Args:
         postal_code: The postal code of the commune to search for.
         rayon: The search radius in kilometers.
-        _top: The number of elements to return.
 
     Returns:
         A list of postal codes.
@@ -225,12 +235,7 @@ def get_nearby_communes(postal_code, rayon=10, _top=15) -> list:
     else:
         communes = data
 
-    res = [int(commune["code_postal"]) for commune in communes]
-
-    if len(res) >= _top:
-        return set(res[:_top])
-    else:
-        return set(res)
+    return set([int(commune["code_postal"]) for commune in communes])
 
 
 def get_zipcode(city_name: str) -> int:
@@ -258,6 +263,31 @@ def get_zipcode(city_name: str) -> int:
     for city in data["cities"]:
         if city["city"].upper() == city_name.upper():
             return city["code"]
+
+
+def get_cityname(zipcode: int) -> str:
+    """
+    Queries the Vicopo API to get the city name for a given zipcode.
+
+    Args:
+        zipcode: the zipcode to look for.
+
+    Returns:
+        The name of city of the zipcode
+    """
+
+    url = f"https://vicopo.selfbuild.fr?code={zipcode}"
+    response = requests.get(url)
+
+    if response.status_code != 200:
+        msg = f"unable to get zip code of {zipcode}: {response}"
+        logger.error(msg)
+        raise Exception(msg)
+
+    data = response.json()
+    logger.info(f"Vicopo API response: {json.dumps(data, indent=4)}")
+    # return first match
+    return data["cities"][0]["city"]
 
 
 if __name__ == "__main__":
