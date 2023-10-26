@@ -6,6 +6,8 @@ import logging
 import pandas as pd
 import requests
 
+import urllib.parse
+
 from navigo.planner.models import ExternalData, POI, Restaurant
 from navigo.settings import FOURESQUARE_API_CLIENT_ID, \
     FOURESQUARE_API_CLIENT_SECRET, FOURESQUARE_API_URL, \
@@ -249,7 +251,7 @@ def get_zipcode(city_name: str) -> int:
         The zip code of the city
     """
 
-    url = f"https://vicopo.selfbuild.fr/cherche/{city_name}"
+    url = "https://vicopo.selfbuild.fr?city=" + urllib.parse.quote(city_name)
     response = requests.get(url)
 
     if response.status_code != 200:
@@ -258,7 +260,7 @@ def get_zipcode(city_name: str) -> int:
         raise Exception(msg)
 
     data = response.json()
-
+    logger.info(f"Vicopo API response: {json.dumps(data, indent=4)}")
     # return first match
     for city in data["cities"]:
         if city["city"].upper() == city_name.upper():

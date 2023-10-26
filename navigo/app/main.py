@@ -49,7 +49,8 @@ async def get_home(request: Request):
         types = get_poi_types()
         themes = get_poi_themes()
         logger.info(
-            f"Serving form with types = ({types}) and themes = ({themes})")
+            f"""Serving form with types = ({[t['NAME'] for t in types]})
+            Serving form with themes = ({[t['NAME'] for t in themes]})""")
     except Exception as e:
         msg = f"unable to fetch themes and/or types: {str(e)}"
         logger.error(msg)
