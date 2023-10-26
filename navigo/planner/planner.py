@@ -10,7 +10,10 @@ def _plan_trip(_user_input: UserData, internal_nodes_data: InternalNodesData, _e
 
     # Step 3: Scoring nodes based on user criteria
     for node in internal_nodes_data.get_all_nodes():
-        node.score = compute_score(node, _user_input, _external_data)
+        try:
+            node.score = compute_score(node, _user_input, _external_data)
+        except Exception as e:
+            print(f"error while computing score for node ({node}): {e}")
 
     # Step 4: Divided nodes by travelling  days (clustering)
     clustering_by_days(_user_input.trip_duration, internal_nodes_data.poi_list)
@@ -38,12 +41,12 @@ def _plan_trip(_user_input: UserData, internal_nodes_data: InternalNodesData, _e
 def plan_trip(_user_input: UserData):
 
     # Step 1: Geographic Selection of POI, Restaurant, Hosting, and Trail
-    # if _user_input.means_of_transport == 'by foot':
-    #     rayon = 5
-    # else:
-    #     rayon = 100
+    if _user_input.means_of_transport == 'by foot':
+        rayon = 5
+    else:
+        rayon = 100
     # internal_nodes_data = get_db_internal_nodes_data_by_zone(_user_input.trip_zone, rayon)
-    internal_nodes_data = get_db_internal_nodes_data_by_zone(_user_input.trip_zone, _user_input.trip_duration)
+    internal_nodes_data = get_db_internal_nodes_data_by_zone(_user_input.trip_zone, rayon, _user_input.trip_duration)
 
     # Step 2: Fetch needed external Data
     _external_data = get_external_data(_user_input.trip_zone, _user_input.trip_start, _user_input.trip_duration)
@@ -74,4 +77,3 @@ if __name__ == "__main__":
     )
 
     _plan_trip(user_input, internal_data, external_data)
-

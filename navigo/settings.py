@@ -16,10 +16,10 @@ MARIADB_DB = config('MARIADB_DB', default="exploreit", cast=str)
 MARIADB_HOSTING_TABLE = config('MARIADB_HOSTING_TABLE', default="hostings", cast=str)
 MARIADB_WC_TABLE = config('MARIADB_WC_TABLE', default="wcs", cast=str)
 MARIADB_RESTAURANT_TABLE = config('MARIADB_RESTAURANT_TABLE', default="restaurants", cast=str)
-MARIADB_POI_TABLE = config('MARIADB_POI_TABLE', default="poi", cast=str)
+MARIADB_POI_TABLE = config('MARIADB_POI_TABLE', default="POI", cast=str)
 MARIADB_POI_TYPE_TABLE = config('MARIADB_POI_TYPE_TABLE', default="POI_TYPE", cast=str)
 MARIADB_POI_THEME_TABLE = config('MARIADB_POI_THEME_TABLE', default="POI_THEME", cast=str)
-MARIADB_TRAIL_TABLE = config('MARIADB_TRAIL_TABLE', default="trails", cast=str)
+MARIADB_TRAIL_TABLE = config('MARIADB_TRAIL_TABLE', default="TRAIL", cast=str)
 
 
 # mongodb settings

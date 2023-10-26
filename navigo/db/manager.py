@@ -4,6 +4,8 @@ import logging
 import requests
 from sqlalchemy import create_engine, text
 from sqlalchemy_utils import database_exists
+from neo4j import GraphDatabase
+from pymongo import MongoClient
 
 from navigo.external.manager import get_nearby_communes
 from navigo.planner.models import InternalNodesData, POI, db_raw_to_poi, db_raw_to_restaurant, db_raw_to_hosting, \
@@ -12,7 +14,8 @@ from navigo.settings import MARIADB_USER, MARIADB_PWD, MARIADB_HOST, MARIADB_DB,
     MARIADB_RESTAURANT_TABLE, MARIADB_HOSTING_TABLE, MARIADB_TRAIL_TABLE, MARIADB_WC_TABLE, \
     MIN_FETCHED_POI_BY_ZONE_PER_DAY, LOOKUP_ITERATIONS_RADIUS_INIT, MAX_LOOKUP_ITERATIONS_FOR_POINTS, \
     LOOKUP_ITERATIONS_RADIUS_STEP, MIN_FETCHED_RESTAURANT_BY_ZONE_PER_DAY, MIN_FETCHED_HOSTING_BY_ZONE_PER_DAY, \
-    MIN_FETCHED_TRAIL_BY_ZONE_PER_DAY, MIN_FETCHED_WC_BY_ZONE_PER_DAY, MARIADB_POI_TYPE_TABLE, MARIADB_POI_THEME_TABLE
+    MIN_FETCHED_TRAIL_BY_ZONE_PER_DAY, MIN_FETCHED_WC_BY_ZONE_PER_DAY, MARIADB_POI_TYPE_TABLE, MARIADB_POI_THEME_TABLE,\
+    NEO4J_PWD, NEO4J_URI, NEO4J_USER, MONGODB_DB, MONGODB_URI, MONGODB_POI_COLLECTION
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +25,16 @@ class DBManagerException(Exception):
 
 
 def get_nearby_communes_as_where_clause(postal_code, rayon=10) -> str:
+    """
+    Returns a list formatted for SQL query of results from get_nearby_communes.
+
+    Args:
+        postal_code: The postal code of the commune to search for.
+        rayon: The search radius in kilometers.
+
+    Returns:
+        A list (on SQL format) of postal codes.
+    """
     communes = get_nearby_communes(postal_code, rayon)
     res = "(" + ",".join(str(n) for n in communes) + ")"
 
@@ -37,76 +50,100 @@ if not database_exists(engine.url):
     raise DBManagerException(msg)
 
 
-def get_poi_by_zone(zone: int, days: int = 1) -> list:
+def get_poi_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     iteration = 0
     poi_list = []
+    res_list = []
+    min_nb_POI = MIN_FETCHED_POI_BY_ZONE_PER_DAY * days
 
-    while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and len(poi_list) < MIN_FETCHED_POI_BY_ZONE_PER_DAY * days:
-        radius = LOOKUP_ITERATIONS_RADIUS_INIT + iteration * LOOKUP_ITERATIONS_RADIUS_STEP
-        logger.info(f"running iteration {iteration} to fetch POI with radius: {radius}")
+    while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and \
+            len(poi_list) < min_nb_POI:
+
+        radius = rayon + iteration * LOOKUP_ITERATIONS_RADIUS_STEP
+        logger.info(
+            f"running iteration {iteration} to fetch POI with radius: {radius}")
 
         with engine.begin() as con:
             query = text(
                 f"""
-                SELECT * FROM {MARIADB_POI_TABLE} WHERE POSTAL_CODE in 
+                SELECT * FROM {MARIADB_POI_TABLE} WHERE POSTAL_CODE in
                 {get_nearby_communes_as_where_clause(zone, radius)}
                 """
             )
-            res = con.execute(query)
-            poi_list = [{r.meta_key: r.meta_value for r in res}]
+            try:
+                poi_list = con.execute(query)
+                poi_list = poi_list.mappings().all()
+            except Exception as e:
+                logger.error(f"error while fetching POI: {e}")
 
         iteration += 1
 
-    poi_list = [db_raw_to_poi(x) for x in poi_list]
-    # logger.info(f"identified POI: {json.dumps(poi_list, indent=4)}")
-    logger.info(f"identified POI: {poi_list}")
-    return poi_list
+    logger.info(f"number of POIs find = {len(poi_list)}")
+    if poi_list != []:
+        res_list = [db_raw_to_poi(x) for x in poi_list]
+        logger.info(f"identified POI: {res_list}")
+        return res_list
+    else:
+        return None
 
 
-def get_restaurants_by_zone(zone: int, days: int = 1) -> list:
+def get_restaurants_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     iteration = 0
     restaurant_list = []
+    min_nb_restau = MIN_FETCHED_RESTAURANT_BY_ZONE_PER_DAY * days
 
-    while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and len(restaurant_list) < MIN_FETCHED_RESTAURANT_BY_ZONE_PER_DAY * days:
-        radius = LOOKUP_ITERATIONS_RADIUS_INIT + iteration * LOOKUP_ITERATIONS_RADIUS_STEP
-        logger.info(f"running iteration {iteration} to fetch Restaurant with radius: {radius}")
+    while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and \
+            len(restaurant_list) < min_nb_restau:
+
+        radius = rayon + iteration * LOOKUP_ITERATIONS_RADIUS_STEP
+        logger.info(
+            f"running iteration {iteration} to fetch Restaurant with radius: {radius}")
 
         with engine.begin() as con:
             query = text(
                 f"""
-                    SELECT * FROM {MARIADB_RESTAURANT_TABLE} WHERE POSTAL_CODE in 
-                    {get_nearby_communes_as_where_clause(zone, radius)}
-                    """
+                SELECT * FROM {MARIADB_RESTAURANT_TABLE} WHERE POSTAL_CODE in
+                {get_nearby_communes_as_where_clause(zone, radius)}
+                """
             )
-            res = con.execute(query)
-            restaurant_list = [{r.meta_key: r.meta_value for r in res}]
+            try:
+                restaurant_list = con.execute(query)
+                restaurant_list = restaurant_list.mappings().all()
+            except Exception as e:
+                logger.error(f"error while fetching Restaurant: {e}")
 
         iteration += 1
+    logger.info(f"number of Restaurants find = {len(restaurant_list)}")
 
     restaurant_list = [db_raw_to_restaurant(x) for x in restaurant_list]
     # logger.info(f"identified restaurants: {json.dumps(restaurant_list, indent=4)}")
-    logger.info(f"identified POI: {restaurant_list}")
+    logger.info(f"identified restaurants: {restaurant_list}")
     return restaurant_list
 
 
 # todo return dataclass
-def get_hosting_by_zone(zone: int, days: int = 1) -> list:
+def get_hosting_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     iteration = 0
     hosting_list = []
+    min_nb_hosting = MIN_FETCHED_HOSTING_BY_ZONE_PER_DAY * days
 
-    while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and len(hosting_list) < MIN_FETCHED_HOSTING_BY_ZONE_PER_DAY * days:
-        radius = LOOKUP_ITERATIONS_RADIUS_INIT + iteration * LOOKUP_ITERATIONS_RADIUS_STEP
-        logger.info(f"running iteration {iteration} to fetch hosting with radius: {radius}")
+    while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and \
+            len(hosting_list) < min_nb_hosting:
+
+        radius = rayon + iteration * LOOKUP_ITERATIONS_RADIUS_STEP
+
+        logger.info(
+            f"running iteration {iteration} to fetch hosting with radius: {radius}")
 
         with engine.begin() as con:
             query = text(
                 f"""
-                    SELECT * FROM {MARIADB_HOSTING_TABLE} WHERE POSTAL_CODE in 
+                    SELECT * FROM {MARIADB_HOSTING_TABLE} WHERE POSTAL_CODE in
                     {get_nearby_communes_as_where_clause(zone, radius)}
                     """
             )
-            res = con.execute(query)
-            hosting_list = [{r.meta_key: r.meta_value for r in res}]
+            hosting_list = con.execute(query)
+            hosting_list = hosting_list.mappings().all()
 
         iteration += 1
 
@@ -116,23 +153,28 @@ def get_hosting_by_zone(zone: int, days: int = 1) -> list:
     return hosting_list
 
 
-def get_trails_by_zone(zone: int, days: int = 1) -> list:
+def get_trails_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     iteration = 0
     trail_list = []
+    min_nb_trail = MIN_FETCHED_TRAIL_BY_ZONE_PER_DAY * days
 
-    while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and len(trail_list) < MIN_FETCHED_TRAIL_BY_ZONE_PER_DAY * days:
-        radius = LOOKUP_ITERATIONS_RADIUS_INIT + iteration * LOOKUP_ITERATIONS_RADIUS_STEP
-        logger.info(f"running iteration {iteration} to fetch trails with radius: {radius}")
+    while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and \
+            len(trail_list) < min_nb_trail:
+
+        radius = rayon + iteration * LOOKUP_ITERATIONS_RADIUS_STEP
+
+        logger.info(
+            f"running iteration {iteration} to fetch trails with radius: {radius}")
 
         with engine.begin() as con:
             query = text(
                 f"""
-                    SELECT * FROM {MARIADB_TRAIL_TABLE} WHERE POSTAL_CODE in 
+                    SELECT * FROM {MARIADB_TRAIL_TABLE} WHERE POSTAL_CODE in
                     {get_nearby_communes_as_where_clause(zone, radius)}
-                    """
+                """
             )
-            res = con.execute(query)
-            trail_list = [{r.meta_key: r.meta_value for r in res}]
+            trail_list = con.execute(query)
+            trail_list = trail_list.mappings().all()
 
         iteration += 1
 
@@ -142,23 +184,28 @@ def get_trails_by_zone(zone: int, days: int = 1) -> list:
     return trail_list
 
 
-def get_wc_by_zone(zone: int, days: int = 1) -> list:
+def get_wc_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     iteration = 0
     wc_list = []
+    min_nb_wc = MIN_FETCHED_WC_BY_ZONE_PER_DAY * days
 
-    while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and len(wc_list) < MIN_FETCHED_WC_BY_ZONE_PER_DAY * days:
-        radius = LOOKUP_ITERATIONS_RADIUS_INIT + iteration * LOOKUP_ITERATIONS_RADIUS_STEP
-        logger.info(f"running iteration {iteration} to fetch wc with radius: {radius}")
+    while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and \
+            len(wc_list) < min_nb_wc:
+
+        radius = rayon + iteration * LOOKUP_ITERATIONS_RADIUS_STEP
+
+        logger.info(
+            f"running iteration {iteration} to fetch wc with radius: {radius}")
 
         with engine.begin() as con:
             query = text(
                 f"""
-                    SELECT * FROM {MARIADB_WC_TABLE} WHERE POSTAL_CODE in 
+                    SELECT * FROM {MARIADB_WC_TABLE} WHERE POSTAL_CODE in
                     {get_nearby_communes_as_where_clause(zone, radius)}
-                    """
+                """
             )
-            res = con.execute(query)
-            wc_list = [{r.meta_key: r.meta_value for r in res}]
+            wc_list = con.execute(query)
+            wc_list = wc_list.mappings().all()
 
         iteration += 1
 
@@ -168,36 +215,16 @@ def get_wc_by_zone(zone: int, days: int = 1) -> list:
     return wc_list
 
 
-def get_db_internal_nodes_data_by_zone(zone: int, days: int = 1) -> InternalNodesData:
+def get_db_internal_nodes_data_by_zone(zone: int, rayon: int, days: int = 1) -> InternalNodesData:
     return InternalNodesData(
-        poi_list=get_poi_by_zone(zone, days),
-        restaurant_list=get_restaurants_by_zone(zone, days),
-        hosting_list=get_hosting_by_zone(zone, days),
-        trail_list=get_trails_by_zone(zone, days)
+        poi_list=get_poi_by_zone(zone, rayon, days),
+        # restaurant_list=[],
+        restaurant_list=get_restaurants_by_zone(zone, rayon, days),
+        # hosting_list=[],
+        hosting_list=get_hosting_by_zone(zone, rayon, days),
+        trail_list=get_trails_by_zone(zone, rayon, days)
+        # trail_list=[]
     )
-
-# todo delete after demo
-# def get_db_internal_nodes_data_by_zone(zone: int, days: int = 1) -> InternalNodesData:
-#     return InternalNodesData(
-#         poi_list=[
-#             POI(name="Paris", city="Paris", latitude=48.8567, longitude=2.3522, city_code=1),
-#             POI(name="Marseille", city="Marseille", latitude=43.2964, longitude=5.3700, city_code=1),
-#             POI(name="Lyon", city="Lyon", latitude=45.7600, longitude=4.8400, city_code=1),
-#             POI(name="Toulouse", city="Toulouse", latitude=43.6045, longitude=1.4440, city_code=1),
-#             POI(name="Nice", city="Nice", latitude=43.7034, longitude=7.2663, city_code=1),
-#             POI(name="Nantes", city="Nantes", latitude=47.2181, longitude=-1.5528, city_code=1),
-#             POI(name="Montpellier", city="Montpellier", latitude=43.6119, longitude=3.8772, city_code=1),
-#             POI(name="Strasbourg", city="Strasbourg", latitude=48.5833, longitude=7.7458, city_code=1),
-#             POI(name="Bordeaux", city="Bordeaux", latitude=44.8400, longitude=-0.5800, city_code=1),
-#             POI(name="Lille", city="Lille", latitude=50.6278, longitude=3.0583, city_code=1),
-#             POI(name="Rennes", city="Rennes", latitude=48.1147, longitude=-1.6794, city_code=1),
-#             POI(name="Reims", city="Reims", latitude=49.2628, longitude=4.0347, city_code=1),
-#             POI(name="Toulon", city="Toulon", latitude=43.1258, longitude=5.9306, city_code=1),
-#         ],
-#         restaurant_list=[],
-#         hosting_list=[],
-#         trail_list=[]
-#     )
 
 
 def get_poi_types() -> list:
@@ -206,13 +233,16 @@ def get_poi_types() -> list:
         query = text(
             f"""SELECT * FROM {MARIADB_POI_TYPE_TABLE}"""
         )
-        res = con.execute(query)
-        poi_types = [{r.meta_key: r.meta_value for r in res if r.meta_key}]
+        try:
+            res = con.execute(query)
+            poi_types = res.mappings().all()
+        except Exception as e:
+            logger.error(f"error while fetching POI types: {e}")
+        # logger.info(f"res = {res_dict}")
 
     # todo: change values
-    if poi_types and not poi_types[0]:
-        poi_types = [{'NAME': 'parc'}, {'NAME': 'museum'}, {'NAME': 'stadium'}, {'NAME': 'jardin'}]
-
+    # if poi_types and not poi_types[0]:
+    #     poi_types = [{'NAME': 'parc'}, {'NAME': 'museum'}, {'NAME': 'stadium'}, {'NAME': 'jardin'}]
     return poi_types
 
 
@@ -222,11 +252,13 @@ def get_poi_themes() -> list:
         query = text(
             f"""SELECT * FROM {MARIADB_POI_THEME_TABLE}"""
         )
-        res = con.execute(query)
-        poi_themes = [{r.meta_key: r.meta_value for r in res if r.meta_key}]
+        try:
+            res = con.execute(query)
+            poi_themes = res.mappings().all()
+        except Exception as e:
+            logger.error(f"error while fetching POI themes: {e}")
 
     # todo: change values
-    if poi_themes and not poi_themes[0]:
-        poi_themes = [{'NAME': 'red'}, {'NAME': 'blue'}, {'NAME': 'green'}, {'NAME': 'black'}]
-
+    # if poi_themes and not poi_themes[0]:
+        # poi_themes = [{'NAME': 'red'}, {'NAME': 'blue'}, {'NAME': 'green'}, {'NAME': 'black'}]
     return poi_themes

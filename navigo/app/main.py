@@ -48,9 +48,11 @@ async def get_home(request: Request):
     try:
         types = get_poi_types()
         themes = get_poi_themes()
-        logger.info(f"Serving form with types = ({types}) and themes = ({themes})")
+        logger.info(
+            f"""Serving form with types = ({[t['NAME'] for t in types]})
+            Serving form with themes = ({[t['NAME'] for t in themes]})""")
     except Exception as e:
-        msg = f"unable to fetch themes: {str(e)}"
+        msg = f"unable to fetch themes and/or types: {str(e)}"
         logger.error(msg)
         raise
     return templates.TemplateResponse(
@@ -89,8 +91,10 @@ class UserTripRequestInput(BaseModel):
             # favorite_poi_categories=[s.lower() for s in self.favorite_poi_categories.split(", ")],
             favorite_poi_type_list=self.favorite_poi_type_list,
             favorite_poi_theme_list=self.favorite_poi_theme_list,
-            favorite_restaurant_categories=[s.lower() for s in self.favorite_restaurant_categories.split(", ")],
-            favorite_hosting_categories=[s.lower() for s in self.favorite_hosting_categories.split(", ")],
+            favorite_restaurant_categories=[
+                s.lower() for s in self.favorite_restaurant_categories.split(", ")],
+            favorite_hosting_categories=[
+                s.lower() for s in self.favorite_hosting_categories.split(", ")],
             # meantime_on_poi=float(self.meantime_on_poi),
             # minimal_notation=int(self.minimal_notation),
             means_of_transport=self.means_of_transport,
@@ -105,14 +109,18 @@ class UserTripRequestInput(BaseModel):
 @app.post("/recommendations/")
 async def create_trip_recommendations(user_request_input: UserTripRequestInput):
     try:
-        logger.info(f"received planning request: {json.dumps(user_request_input.dict(), indent=4)}")
+        logger.info(f"""received planning request: {json.dumps(
+            user_request_input.model_dump(),
+            indent=4)}""")
 
         geospatial_point_list = plan_trip(user_request_input.to_user_data())
 
         logger.info(f"result: {geospatial_point_list}")
 
         # create and serve Dash app
-        app.mount("/dash", WSGIMiddleware(create_dash_app(geospatial_point_list).server))
+        app.mount(
+            "/dash", WSGIMiddleware(
+                create_dash_app(geospatial_point_list).server))
 
         return
     except Exception as e:

@@ -1,4 +1,7 @@
 from dataclasses import dataclass, field
+from pymongo import MongoClient
+from neo4j import GraphDatabase
+from navigo.settings import MONGODB_URI, MONGODB_DB, MONGODB_POI_COLLECTION, NEO4J_URI, NEO4J_USER, NEO4J_PWD
 
 
 @dataclass
@@ -27,13 +30,29 @@ class POI(GeospatialPoint):
 
 
 def db_raw_to_poi(db_raw: dict) -> POI:
-    return POI(
-        longitude=db_raw['LONGITUDE'],
-        latitude=db_raw['LATITUDE'],
-        name=db_raw['NAME'],  # todo verify
-        city=db_raw['CITY'],
-        city_code=db_raw['POSTAL_CODE'],
-    )
+    collection = MongoClient(MONGODB_URI)[
+            MONGODB_DB][MONGODB_POI_COLLECTION]
+    # print("connection mongoDB ok")
+
+    document = collection.find_one({'UUID': db_raw.id})
+    if document:
+        # connect to neo4j
+        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD))
+        with driver.session() as session:
+            query = (
+                f"MATCH (n) WHERE n.uuid = '{db_raw.id}' RETURN n"
+            )
+            result = session.run(query).data()
+            # print(f"neo4j result for poi.id ({db_raw.id}) = {result}")
+        if result:
+            return POI(
+                    name=document['LABEL']['fr'],
+                    city=db_raw.CITY,
+                    city_code=db_raw.POSTAL_CODE,
+                    uuid=db_raw.id,
+                    latitude=result[0]['n']['LATITUDE'],
+                    longitude=result[0]['n']['LONGITUDE'],
+                    )
 
 
 @dataclass
@@ -42,13 +61,21 @@ class Restaurant(GeospatialPoint):
 
 
 def db_raw_to_restaurant(db_raw: dict) -> Restaurant:
-    return Restaurant(
-        longitude=db_raw['LONGITUDE'],
-        latitude=db_raw['LATITUDE'],
-        name=db_raw['NAME'],
-        city=db_raw['CITY'],
-        city_code=db_raw['POSTAL_CODE'],
-    )
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD))
+    with driver.session() as session:
+        query = (
+            f"MATCH (n:restaurant) WHERE n.uuid = '{db_raw.uuid}' RETURN n"
+        )
+        result = session.run(query).data()
+    if result:
+        print(f"neo4j result for rest ({db_raw.uuid}) = {result}")
+        return Restaurant(
+            latitude=result[0]['n']['LATITUDE'],
+            longitude=result[0]['n']['LONGITUDE'],
+            name=db_raw['NAME'],
+            city=db_raw['CITY'],
+            city_code=db_raw['POSTAL_CODE'],
+        )
 
 
 @dataclass
@@ -57,13 +84,21 @@ class Hosting(GeospatialPoint):
 
 
 def db_raw_to_hosting(db_raw: dict) -> Hosting:
-    return Hosting(
-        longitude=db_raw['LONGITUDE'],
-        latitude=db_raw['LATITUDE'],
-        name=db_raw['NAME'],
-        city=db_raw['CITY'],
-        city_code=db_raw['POSTAL_CODE'],
-    )
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD))
+    with driver.session() as session:
+        query = (
+            f"MATCH (n:hosting) WHERE n.uuid = '{db_raw.uuid}' RETURN n"
+        )
+        result = session.run(query).data()
+    if result:
+        print(f"neo4j result for hosting ({db_raw.uuid}) = {result}")
+        return Hosting(
+            latitude=result[0]['n']['LATITUDE'],
+            longitude=result[0]['n']['LONGITUDE'],
+            name=db_raw['NAME'],
+            city=db_raw['CITY'],
+            city_code=db_raw['POSTAL_CODE'],
+        )
 
 
 @dataclass
@@ -72,13 +107,29 @@ class Trail(GeospatialPoint):
 
 
 def db_raw_to_trail(db_raw: dict) -> Trail:
-    return Trail(
-        longitude=db_raw['LONGITUDE'],
-        latitude=db_raw['LATITUDE'],
-        name=db_raw['NAME'],  # verify
-        city=db_raw['CITY'],
-        city_code=db_raw['POSTAL_CODE'],
-    )
+    collection = MongoClient(MONGODB_URI)[
+            MONGODB_DB][MONGODB_POI_COLLECTION]
+    # print("connection mongoDB ok")
+
+    document = collection.find_one({'UUID': db_raw.id})
+    if document:
+        # connect to neo4j
+        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD))
+        with driver.session() as session:
+            query = (
+                f"MATCH (n) WHERE n.uuid = '{db_raw.id}' RETURN n"
+            )
+            result = session.run(query).data()
+            # print(f"neo4j result for poi.id ({db_raw.id}) = {result}")
+        if result:
+            return Trail(
+                    name=document['LABEL']['fr'],
+                    city=db_raw.CITY,
+                    city_code=db_raw.POSTAL_CODE,
+                    uuid=db_raw.id,
+                    latitude=result[0]['n']['LATITUDE'],
+                    longitude=result[0]['n']['LONGITUDE'],
+                    )
 
 
 @dataclass
@@ -88,12 +139,21 @@ class WC(GeospatialPoint):
 
 
 def db_raw_to_wc(db_raw: dict) -> WC:
-    return WC(
-        longitude=db_raw['LONGITUDE'],
-        latitude=db_raw['LATITUDE'],
-        city=db_raw['CITY'],
-        city_code=db_raw['POSTAL_CODE'],
-    )
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD))
+    with driver.session() as session:
+        query = (
+            f"MATCH (n:wc) WHERE n.uuid = '{db_raw.uuid}' RETURN n"
+        )
+        result = session.run(query).data()
+    if result:
+        print(f"neo4j result for wc ({db_raw.uuid}) = {result}")
+        return WC(
+            latitude=result[0]['n']['LATITUDE'],
+            longitude=result[0]['n']['LONGITUDE'],
+            name=db_raw['NAME'],
+            city=db_raw['CITY'],
+            city_code=db_raw['POSTAL_CODE'],
+        )
 
 
 @dataclass
@@ -128,7 +188,8 @@ class InternalNodesData:
     trail_list: list[Trail]
 
     def get_all_nodes(self):
-        return self.poi_list + self.restaurant_list + self.hosting_list + self.trail_list
+        return self.poi_list + \
+            self.restaurant_list + self.hosting_list + self.trail_list
 
     def get_sorted_points(self):
         return (
@@ -143,7 +204,9 @@ class InternalNodesData:
         result_list = []
         for d in range(nb_days):
             my_list = [poi for poi in self.poi_list if poi.cluster == d]
-            for res in sorted(my_list, key=lambda x: x.score, reverse=True)[:max_pois_by_day]:
+            for res in sorted(my_list,
+                              key=lambda x: x.score,
+                              reverse=True)[:max_pois_by_day]:
                 result_list.append(res)
         return result_list
 
@@ -151,7 +214,8 @@ class InternalNodesData:
         """return the object with best score level"""
         return (
             sorted(self.poi_list, key=lambda x: x.score, reverse=True)[0],
-            sorted(self.restaurant_list, key=lambda x: x.score, reverse=True)[0],
+            sorted(self.restaurant_list,
+                   key=lambda x: x.score, reverse=True)[0],
             sorted(self.hosting_list, key=lambda x: x.score, reverse=True)[0],
             sorted(self.trail_list, key=lambda x: x.score, reverse=True)[0]
         )
