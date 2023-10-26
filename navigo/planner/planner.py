@@ -10,7 +10,10 @@ def _plan_trip(_user_input: UserData, internal_nodes_data: InternalNodesData, _e
 
     # Step 3: Scoring nodes based on user criteria
     for node in internal_nodes_data.get_all_nodes():
-        node.score = compute_score(node, _user_input, _external_data)
+        try:
+            node.score = compute_score(node, _user_input, _external_data)
+        except Exception as e:
+            print(f"error while computing score for node ({node}): {e}")
 
     # Step 4: Divided nodes by travelling  days (clustering)
     clustering_by_days(_user_input.trip_duration, internal_nodes_data.poi_list)
