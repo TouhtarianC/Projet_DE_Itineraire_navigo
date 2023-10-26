@@ -215,29 +215,22 @@ def get_nearby_communes(postal_code, rayon=10, _top=15) -> list:
         A list of postal codes.
     """
 
-    # ToDo : actuellement retourne 5 villes aux hasard dans la liste
-    # des villes retournées => à modifier pour retourner les 5 plus proches
-
     url = f"https://www.villes-voisines.fr/getcp.php?cp={postal_code}&rayon={rayon}"
     response = requests.get(url)
     data = json.loads(response.content)
-    #logger.info(f"Villes voisines: {json.dumps(data, indent=4)}")
+    # logger.info(f"Villes voisines: {json.dumps(data, indent=4)}")
 
     if isinstance(data, dict):
         communes = list(data.values())
     else:
         communes = data
 
-    res = list(
-        set(
-            [int(commune["code_postal"]) for commune in communes]
-        )
-    )
+    res = [int(commune["code_postal"]) for commune in communes]
 
-    if len(res) >= 15:
-        return res[:_top]
+    if len(res) >= _top:
+        return set(res[:_top])
     else:
-        return res
+        return set(res)
 
 
 def get_zipcode(city_name: str) -> int:
