@@ -24,7 +24,7 @@ class DBManagerException(Exception):
     pass
 
 
-def get_nearby_communes_as_where_clause(postal_code, rayon=10, _top=15) -> str:
+def get_nearby_communes_as_where_clause(postal_code, rayon=10) -> str:
     """
     Returns a list formatted for SQL query of results from get_nearby_communes.
 
@@ -35,9 +35,7 @@ def get_nearby_communes_as_where_clause(postal_code, rayon=10, _top=15) -> str:
     Returns:
         A list (on SQL format) of postal codes.
     """
-    communes = get_nearby_communes(postal_code,
-                                   rayon,
-                                   _top)
+    communes = get_nearby_communes(postal_code, rayon)
     res = "(" + ",".join(str(n) for n in communes) + ")"
 
     logger.info(f"restricting search in following communes: {res}")
@@ -52,7 +50,7 @@ if not database_exists(engine.url):
     raise DBManagerException(msg)
 
 
-def get_poi_by_zone(zone: int, days: int = 1) -> list:
+def get_poi_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     iteration = 0
     poi_list = []
     res_list = []
@@ -61,8 +59,7 @@ def get_poi_by_zone(zone: int, days: int = 1) -> list:
     while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and \
             len(poi_list) < min_nb_POI:
 
-        radius = LOOKUP_ITERATIONS_RADIUS_INIT + \
-            iteration * LOOKUP_ITERATIONS_RADIUS_STEP
+        radius = rayon + iteration * LOOKUP_ITERATIONS_RADIUS_STEP
         logger.info(
             f"running iteration {iteration} to fetch POI with radius: {radius}")
 
@@ -70,7 +67,7 @@ def get_poi_by_zone(zone: int, days: int = 1) -> list:
             query = text(
                 f"""
                 SELECT * FROM {MARIADB_POI_TABLE} WHERE POSTAL_CODE in
-                {get_nearby_communes_as_where_clause(zone, radius, min_nb_POI)}
+                {get_nearby_communes_as_where_clause(zone, radius)}
                 """
             )
             try:
@@ -90,14 +87,15 @@ def get_poi_by_zone(zone: int, days: int = 1) -> list:
         return None
 
 
-def get_restaurants_by_zone(zone: int, days: int = 1) -> list:
+def get_restaurants_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     iteration = 0
     restaurant_list = []
     min_nb_restau = MIN_FETCHED_RESTAURANT_BY_ZONE_PER_DAY * days
 
-    while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and len(restaurant_list) < min_nb_restau:
-        radius = LOOKUP_ITERATIONS_RADIUS_INIT + \
-            iteration * LOOKUP_ITERATIONS_RADIUS_STEP
+    while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and \
+            len(restaurant_list) < min_nb_restau:
+
+        radius = rayon + iteration * LOOKUP_ITERATIONS_RADIUS_STEP
         logger.info(
             f"running iteration {iteration} to fetch Restaurant with radius: {radius}")
 
@@ -105,7 +103,7 @@ def get_restaurants_by_zone(zone: int, days: int = 1) -> list:
             query = text(
                 f"""
                 SELECT * FROM {MARIADB_RESTAURANT_TABLE} WHERE POSTAL_CODE in
-                {get_nearby_communes_as_where_clause(zone, radius, min_nb_restau)}
+                {get_nearby_communes_as_where_clause(zone, radius)}
                 """
             )
             try:
@@ -124,7 +122,7 @@ def get_restaurants_by_zone(zone: int, days: int = 1) -> list:
 
 
 # todo return dataclass
-def get_hosting_by_zone(zone: int, days: int = 1) -> list:
+def get_hosting_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     iteration = 0
     hosting_list = []
     min_nb_hosting = MIN_FETCHED_HOSTING_BY_ZONE_PER_DAY * days
@@ -132,8 +130,7 @@ def get_hosting_by_zone(zone: int, days: int = 1) -> list:
     while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and \
             len(hosting_list) < min_nb_hosting:
 
-        radius = LOOKUP_ITERATIONS_RADIUS_INIT + \
-            iteration * LOOKUP_ITERATIONS_RADIUS_STEP
+        radius = rayon + iteration * LOOKUP_ITERATIONS_RADIUS_STEP
 
         logger.info(
             f"running iteration {iteration} to fetch hosting with radius: {radius}")
@@ -156,7 +153,7 @@ def get_hosting_by_zone(zone: int, days: int = 1) -> list:
     return hosting_list
 
 
-def get_trails_by_zone(zone: int, days: int = 1) -> list:
+def get_trails_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     iteration = 0
     trail_list = []
     min_nb_trail = MIN_FETCHED_TRAIL_BY_ZONE_PER_DAY * days
@@ -164,8 +161,7 @@ def get_trails_by_zone(zone: int, days: int = 1) -> list:
     while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and \
             len(trail_list) < min_nb_trail:
 
-        radius = LOOKUP_ITERATIONS_RADIUS_INIT + \
-            iteration * LOOKUP_ITERATIONS_RADIUS_STEP
+        radius = rayon + iteration * LOOKUP_ITERATIONS_RADIUS_STEP
 
         logger.info(
             f"running iteration {iteration} to fetch trails with radius: {radius}")
@@ -188,7 +184,7 @@ def get_trails_by_zone(zone: int, days: int = 1) -> list:
     return trail_list
 
 
-def get_wc_by_zone(zone: int, days: int = 1) -> list:
+def get_wc_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     iteration = 0
     wc_list = []
     min_nb_wc = MIN_FETCHED_WC_BY_ZONE_PER_DAY * days
@@ -196,8 +192,7 @@ def get_wc_by_zone(zone: int, days: int = 1) -> list:
     while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and \
             len(wc_list) < min_nb_wc:
 
-        radius = LOOKUP_ITERATIONS_RADIUS_INIT + \
-            iteration * LOOKUP_ITERATIONS_RADIUS_STEP
+        radius = rayon + iteration * LOOKUP_ITERATIONS_RADIUS_STEP
 
         logger.info(
             f"running iteration {iteration} to fetch wc with radius: {radius}")
@@ -220,14 +215,14 @@ def get_wc_by_zone(zone: int, days: int = 1) -> list:
     return wc_list
 
 
-def get_db_internal_nodes_data_by_zone(zone: int, days: int = 1) -> InternalNodesData:
+def get_db_internal_nodes_data_by_zone(zone: int, rayon: int, days: int = 1) -> InternalNodesData:
     return InternalNodesData(
-        poi_list=get_poi_by_zone(zone, days),
+        poi_list=get_poi_by_zone(zone, rayon, days),
         # restaurant_list=[],
-        restaurant_list=get_restaurants_by_zone(zone, days),
+        restaurant_list=get_restaurants_by_zone(zone, rayon, days),
         # hosting_list=[],
-        hosting_list=get_hosting_by_zone(zone, days),
-        trail_list=get_trails_by_zone(zone, days)
+        hosting_list=get_hosting_by_zone(zone, rayon, days),
+        trail_list=get_trails_by_zone(zone, rayon, days)
         # trail_list=[]
     )
 
