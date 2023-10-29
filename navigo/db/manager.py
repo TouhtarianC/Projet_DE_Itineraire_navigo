@@ -36,7 +36,7 @@ def get_nearby_communes_as_where_clause(postal_code, rayon=10) -> str:
         A list (on SQL format) of postal codes.
     """
     communes = get_nearby_communes(postal_code, rayon)
-    res = "(" + ",".join(str(n) for n in communes) + ")"
+    res = "(" + ",".join(str(n) for n in communes) + ", 33063" + ")" #TODO : ajout spécifique de ce code postal 33063 pour faire marcher sur Bordeaux...
 
     logger.info(f"restricting search in following communes: {res}")
     return res
