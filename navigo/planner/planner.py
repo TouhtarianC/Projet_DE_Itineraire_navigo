@@ -32,9 +32,11 @@ def _plan_trip(_user_input: UserData, internal_nodes_data: InternalNodesData, _e
     print(f"first_POI = {first_poi}")
 
     # Step 6: compute itinary for each days
-    # itinerary = compute_itinerary(selected_poi, selected_restaurants, selected_hosting, selected_trails)
-    itinerary = selected_poi
-
+    itinerary = compute_itinerary( \
+        first_poi, selected_poi, internal_nodes_data.restaurant_list, \
+        internal_nodes_data.hosting_list, internal_nodes_data.trail_list)
+    # after this step, itinerary is composed of 4 lists (POI, Restaurants, Hostings, [], where day and rank are used to map by day, as the order rank) 
+    
     return itinerary
 
 
@@ -57,8 +59,8 @@ def plan_trip(_user_input: UserData):
 # Usage example with custom weights:
 
 if __name__ == "__main__":
-    # Provide the necessary input data
-    user_input = UserData(
+    # Provide the necessary input data 
+    _user_input = UserData(
         favorite_poi_type_list=["museum", "park", "historical"],
         favorite_restaurant_categories=["italian", "asian"],
         favorite_hosting_categories=["hotel", "bnb"],
@@ -76,4 +78,6 @@ if __name__ == "__main__":
         top_restaurant_list=[...],  # Replace with actual data
     )
 
-    _plan_trip(user_input, internal_data, external_data)
+    res_itinerary = plan_trip(_user_input)
+
+    #user_input, internal_nodes_data, external_nodes_data = _plan_trip(user_input, internal_data, external_data)

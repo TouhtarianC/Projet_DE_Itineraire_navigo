@@ -21,6 +21,7 @@ class GeospatialPoint:
 
     uuid: str = ""
     cluster: int | None = None
+    day: int | None = None
     rank: int | None = None
 
 
@@ -34,13 +35,13 @@ def db_raw_to_poi(db_raw: dict) -> POI:
             MONGODB_DB][MONGODB_POI_COLLECTION]
     # print("connection mongoDB ok")
 
-    document = collection.find_one({'UUID': db_raw.id})
+    document = collection.find_one({'UUID': db_raw.UUID})
     if document:
         # connect to neo4j
         driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD))
         with driver.session() as session:
             query = (
-                f"MATCH (n) WHERE n.uuid = '{db_raw.id}' RETURN n"
+                f"MATCH (n) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
             )
             result = session.run(query).data()
             # print(f"neo4j result for poi.id ({db_raw.id}) = {result}")
@@ -49,7 +50,7 @@ def db_raw_to_poi(db_raw: dict) -> POI:
                     name=document['LABEL']['fr'],
                     city=db_raw.CITY,
                     city_code=db_raw.POSTAL_CODE,
-                    uuid=db_raw.id,
+                    uuid=db_raw.UUID,
                     latitude=result[0]['n']['LATITUDE'],
                     longitude=result[0]['n']['LONGITUDE'],
                     )
@@ -64,14 +65,15 @@ def db_raw_to_restaurant(db_raw: dict) -> Restaurant:
     driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD))
     with driver.session() as session:
         query = (
-            f"MATCH (n:restaurant) WHERE n.uuid = '{db_raw.uuid}' RETURN n"
+            f"MATCH (n:restaurant) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
         )
         result = session.run(query).data()
     if result:
-        print(f"neo4j result for rest ({db_raw.uuid}) = {result}")
+        print(f"neo4j result for rest ({db_raw.UUID}) = {result}")
         return Restaurant(
             latitude=result[0]['n']['LATITUDE'],
             longitude=result[0]['n']['LONGITUDE'],
+            uuid=db_raw['UUID'],
             name=db_raw['NAME'],
             city=db_raw['CITY'],
             city_code=db_raw['POSTAL_CODE'],
@@ -87,14 +89,15 @@ def db_raw_to_hosting(db_raw: dict) -> Hosting:
     driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD))
     with driver.session() as session:
         query = (
-            f"MATCH (n:hosting) WHERE n.uuid = '{db_raw.uuid}' RETURN n"
+            f"MATCH (n:hosting) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
         )
         result = session.run(query).data()
     if result:
-        print(f"neo4j result for hosting ({db_raw.uuid}) = {result}")
+        print(f"neo4j result for hosting ({db_raw.UUID}) = {result}")
         return Hosting(
             latitude=result[0]['n']['LATITUDE'],
             longitude=result[0]['n']['LONGITUDE'],
+            uuid=db_raw['UUID'],
             name=db_raw['NAME'],
             city=db_raw['CITY'],
             city_code=db_raw['POSTAL_CODE'],
@@ -111,13 +114,13 @@ def db_raw_to_trail(db_raw: dict) -> Trail:
             MONGODB_DB][MONGODB_POI_COLLECTION]
     # print("connection mongoDB ok")
 
-    document = collection.find_one({'UUID': db_raw.id})
+    document = collection.find_one({'UUID': db_raw.UUID})
     if document:
         # connect to neo4j
         driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD))
         with driver.session() as session:
             query = (
-                f"MATCH (n) WHERE n.uuid = '{db_raw.id}' RETURN n"
+                f"MATCH (n) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
             )
             result = session.run(query).data()
             # print(f"neo4j result for poi.id ({db_raw.id}) = {result}")
@@ -126,7 +129,7 @@ def db_raw_to_trail(db_raw: dict) -> Trail:
                     name=document['LABEL']['fr'],
                     city=db_raw.CITY,
                     city_code=db_raw.POSTAL_CODE,
-                    uuid=db_raw.id,
+                    uuid=db_raw.UUID,
                     latitude=result[0]['n']['LATITUDE'],
                     longitude=result[0]['n']['LONGITUDE'],
                     )
@@ -142,11 +145,11 @@ def db_raw_to_wc(db_raw: dict) -> WC:
     driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD))
     with driver.session() as session:
         query = (
-            f"MATCH (n:wc) WHERE n.uuid = '{db_raw.uuid}' RETURN n"
+            f"MATCH (n:wc) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
         )
         result = session.run(query).data()
     if result:
-        print(f"neo4j result for wc ({db_raw.uuid}) = {result}")
+        print(f"neo4j result for wc ({db_raw.UUID}) = {result}")
         return WC(
             latitude=result[0]['n']['LATITUDE'],
             longitude=result[0]['n']['LONGITUDE'],
@@ -158,8 +161,8 @@ def db_raw_to_wc(db_raw: dict) -> WC:
 
 @dataclass
 class UserData:
-    trip_zone: int = 33
-    trip_start: str = None
+    trip_zone: int = 33000
+    trip_start: str = "2024-01-08"
     trip_duration: int = 7
     # favorite_poi_categories: list[str] = field(default_factory=list)
     favorite_poi_type_list: list[str] = field(default_factory=list)
