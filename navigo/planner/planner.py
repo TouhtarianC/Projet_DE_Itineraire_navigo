@@ -21,6 +21,9 @@ def _plan_trip(_user_input: UserData, internal_nodes_data: InternalNodesData, _e
 
     # Step 4: Compute the maximum points that can be visited
     max_points_by_day = 4
+    max_restaurants = 2 * _user_input.trip_duration
+    max_hostings = 1 * _user_input.trip_duration
+    max_trails = 2 * _user_input.trip_duration
 
     # Step 5: Selection of top ones
     selected_poi = internal_nodes_data.select_top_points_by_day(
@@ -31,12 +34,23 @@ def _plan_trip(_user_input: UserData, internal_nodes_data: InternalNodesData, _e
     first_poi = sorted(selected_poi, key=lambda x: x.score, reverse=True)[0]
     print(f"first_POI = {first_poi}")
 
+    _, selected_restaurant, selected_hosting, selected_trail = internal_nodes_data.get_sorted_points()
+
     # Step 6: compute itinary for each days
-    itinerary = compute_itinerary( \
-        first_poi, selected_poi, internal_nodes_data.restaurant_list, \
-        internal_nodes_data.hosting_list, internal_nodes_data.trail_list)
-    # after this step, itinerary is composed of 4 lists (POI, Restaurants, Hostings, [], where day and rank are used to map by day, as the order rank) 
-    
+    itinerary = compute_itinerary(
+        first_poi, selected_poi,
+        selected_restaurant[:max_restaurants],
+        selected_hosting[:max_hostings],
+        selected_trail[:max_trails]
+        )
+    # itinerary = compute_itinerary(
+    #     first_poi, selected_poi,
+    #     selected_restaurant,
+    #     selected_hosting,
+    #     selected_trail
+    #     )
+    # after this step, itinerary is composed of POI, Restaurants, Hostings and Trails List where day and rank are used to map by day, as the order rank) 
+
     return itinerary
 
 
