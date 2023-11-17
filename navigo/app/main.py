@@ -13,12 +13,11 @@ from fastapi.middleware.wsgi import WSGIMiddleware
 from pydantic import BaseModel
 
 from navigo.db import get_restaurants_by_zone, get_poi_by_zone, get_hosting_by_zone, get_trails_by_zone, \
-    get_wc_by_zone
+    get_wc_by_zone, get_poi_types, get_poi_themes, get_restaurants_types, get_hostings_types
 from navigo.external import get_zipcode
 from navigo.map import create_dash_app
 from navigo.planner.models import UserData
 from navigo.planner.planner import plan_trip
-from navigo.db import get_poi_types, get_poi_themes
 
 
 logger = logging.getLogger(__name__)
@@ -47,16 +46,25 @@ async def get_home(request: Request):
     try:
         types = get_poi_types()
         themes = get_poi_themes()
+        rest_types = get_restaurants_types()
+        hosting_types = get_hostings_types()
         logger.info(
             f"""Serving form with types = ({[t['NAME'] for t in types]})
-            Serving form with themes = ({[t['NAME'] for t in themes]})""")
+            Serving form with themes = ({[t['NAME'] for t in themes]}
+            Serving form with rest_types = ({[t['TYPE'] for t in rest_types]})
+            Serving form with hosting_types = ({[t['TYPE'] for t in hosting_types]})""")
     except Exception as e:
         msg = f"unable to fetch themes and/or types: {str(e)}"
         logger.error(msg)
         raise
     return templates.TemplateResponse(
         "index.html",
-        {"request": request, "today_date": today_date, "types": types, "themes": themes})
+        {"request": request,
+         "today_date": today_date,
+         "types": types,
+         "themes": themes,
+         "rest_types": rest_types,
+         "hosting_types": hosting_types})
 
 
 # Request body model for the POST endpoint
@@ -65,13 +73,10 @@ class UserTripRequestInput(BaseModel):
     trip_zone: str
     trip_start: str
     trip_duration: str
-    # favorite_poi_categories: list
     favorite_poi_type_list: list
     favorite_poi_theme_list: list
-    favorite_restaurant_categories: str
-    favorite_hosting_categories: str
-    # meantime_on_poi: str
-    # minimal_notation: str
+    favorite_restaurant_categories: list
+    favorite_hosting_categories: list
     means_of_transport: str
     sensitivity_to_weather: str
     days_on_hiking: str
@@ -87,15 +92,10 @@ class UserTripRequestInput(BaseModel):
             trip_zone=_trip_zone,
             trip_start=self.trip_start,
             trip_duration=int(self.trip_duration),
-            # favorite_poi_categories=[s.lower() for s in self.favorite_poi_categories.split(", ")],
             favorite_poi_type_list=self.favorite_poi_type_list,
             favorite_poi_theme_list=self.favorite_poi_theme_list,
-            favorite_restaurant_categories=[
-                s.lower() for s in self.favorite_restaurant_categories.split(", ")],
-            favorite_hosting_categories=[
-                s.lower() for s in self.favorite_hosting_categories.split(", ")],
-            # meantime_on_poi=float(self.meantime_on_poi),
-            # minimal_notation=int(self.minimal_notation),
+            favorite_restaurant_categories=self.favorite_restaurant_categories,
+            favorite_hosting_categories=self.favorite_hosting_categories,
             means_of_transport=self.means_of_transport,
             sensitivity_to_weather=bool(self.sensitivity_to_weather),
             days_on_hiking=float(self.days_on_hiking)

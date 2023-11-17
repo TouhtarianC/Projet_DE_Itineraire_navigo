@@ -247,3 +247,31 @@ def get_poi_themes() -> list:
             logger.error(f"error while fetching POI themes: {e}")
 
     return poi_themes
+
+
+def get_restaurants_types() -> list:
+    rest_type = []
+    with engine.begin() as con:
+        query = text(
+            f"""SELECT DISTINCT(TYPE) FROM {MARIADB_RESTAURANT_TABLE}"""
+        )
+        try:
+            res = con.execute(query)
+            rest_type = res.mappings().all()
+        except Exception as e:
+            logger.error(f"error while fetching restaurants types: {e}")
+    return rest_type
+
+
+def get_hostings_types() -> list:
+    host_types = []
+    with engine.begin() as con:
+        query = text(
+            f"""SELECT DISTINCT(TYPE) FROM {MARIADB_HOSTING_TABLE}"""
+        )
+        try:
+            res = con.execute(query)
+            host_types = res.mappings().all()
+        except Exception as e:
+            logger.error(f"error while fetching hostings types: {e}")
+    return host_types
