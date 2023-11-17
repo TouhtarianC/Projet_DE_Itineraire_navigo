@@ -102,8 +102,6 @@ class UserTripRequestInput(BaseModel):
         )
 
 
-# todo: add api de plannnification de trip mais retour json
-# todo : integrate city to code postal
 # POST endpoint to get recommendations
 @app.post("/recommendations/")
 async def create_trip_recommendations(user_request_input: UserTripRequestInput):

@@ -99,7 +99,6 @@ def get_weather_forecast(request: WeatherRequest):
 def get_weather_forecast_by_zone(zone: int,
                                  trip_start: str,
                                  trip_duration: int) -> bool:
-    # todo => is it possible to take a zip code as input ?
     # logger.info(f"get_weather_forecast_by_zone zone: {zone}")
     ville = get_cityname(zone)
     logger.info(f"get_weather_forecast_by_zone ville: {ville}")

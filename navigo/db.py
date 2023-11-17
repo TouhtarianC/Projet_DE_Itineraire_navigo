@@ -116,7 +116,6 @@ def get_restaurants_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     return restaurant_list
 
 
-# todo return dataclass
 def get_hosting_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     iteration = 0
     hosting_list = []
@@ -213,12 +212,9 @@ def get_wc_by_zone(zone: int, rayon: int, days: int = 1) -> list:
 def get_db_internal_nodes_data_by_zone(zone: int, rayon: int, days: int = 1) -> InternalNodesData:
     return InternalNodesData(
         poi_list=get_poi_by_zone(zone, rayon, days),
-        # restaurant_list=[],
         restaurant_list=get_restaurants_by_zone(zone, rayon, days),
-        # hosting_list=[],
         hosting_list=get_hosting_by_zone(zone, rayon, days),
         trail_list=get_trails_by_zone(zone, rayon, days)
-        # trail_list=[]
     )
 
 
@@ -235,9 +231,6 @@ def get_poi_types() -> list:
             logger.error(f"error while fetching POI types: {e}")
         # logger.info(f"res = {res_dict}")
 
-    # todo: change values
-    # if poi_types and not poi_types[0]:
-    #     poi_types = [{'NAME': 'parc'}, {'NAME': 'museum'}, {'NAME': 'stadium'}, {'NAME': 'jardin'}]
     return poi_types
 
 
@@ -253,7 +246,4 @@ def get_poi_themes() -> list:
         except Exception as e:
             logger.error(f"error while fetching POI themes: {e}")
 
-    # todo: change values
-    # if poi_themes and not poi_themes[0]:
-        # poi_themes = [{'NAME': 'red'}, {'NAME': 'blue'}, {'NAME': 'green'}, {'NAME': 'black'}]
     return poi_themes
