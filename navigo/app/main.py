@@ -5,7 +5,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
-import dash
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
@@ -13,13 +12,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
 from pydantic import BaseModel
 
-from navigo.db.manager import get_restaurants_by_zone, get_poi_by_zone, get_hosting_by_zone, get_trails_by_zone, \
+from navigo.db import get_restaurants_by_zone, get_poi_by_zone, get_hosting_by_zone, get_trails_by_zone, \
     get_wc_by_zone
-from navigo.external.manager import get_zipcode
-from navigo.map.dash_app import create_dash_app
+from navigo.external import get_zipcode
+from navigo.map import create_dash_app
 from navigo.planner.models import UserData
 from navigo.planner.planner import plan_trip
-from navigo.db.manager import get_poi_types, get_poi_themes
+from navigo.db import get_poi_types, get_poi_themes
 
 
 logger = logging.getLogger(__name__)

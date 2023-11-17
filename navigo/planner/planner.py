@@ -1,6 +1,6 @@
-from navigo.db.manager import get_db_internal_nodes_data_by_zone
-from navigo.external.manager import get_external_data
-from navigo.itinerary.manager import compute_itinerary
+from navigo.db import get_db_internal_nodes_data_by_zone
+from navigo.external import get_external_data
+from navigo.itinerary import compute_itinerary
 from navigo.planner.models import UserData, InternalNodesData, ExternalData
 from navigo.planner.scorer import compute_score
 from navigo.planner.clustering import clustering_by_days

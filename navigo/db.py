@@ -1,21 +1,16 @@
-import json
 import logging
 
-import requests
 from sqlalchemy import create_engine, text
 from sqlalchemy_utils import database_exists
-from neo4j import GraphDatabase
-from pymongo import MongoClient
 
-from navigo.external.manager import get_nearby_communes
-from navigo.planner.models import InternalNodesData, POI, db_raw_to_poi, db_raw_to_restaurant, db_raw_to_hosting, \
+from navigo.external import get_nearby_communes
+from navigo.planner.models import InternalNodesData, db_raw_to_poi, db_raw_to_restaurant, db_raw_to_hosting, \
     db_raw_to_trail, db_raw_to_wc
 from navigo.settings import MARIADB_USER, MARIADB_PWD, MARIADB_HOST, MARIADB_DB, MARIADB_POI_TABLE, \
     MARIADB_RESTAURANT_TABLE, MARIADB_HOSTING_TABLE, MARIADB_TRAIL_TABLE, MARIADB_WC_TABLE, \
-    MIN_FETCHED_POI_BY_ZONE_PER_DAY, LOOKUP_ITERATIONS_RADIUS_INIT, MAX_LOOKUP_ITERATIONS_FOR_POINTS, \
+    MIN_FETCHED_POI_BY_ZONE_PER_DAY, MAX_LOOKUP_ITERATIONS_FOR_POINTS, \
     LOOKUP_ITERATIONS_RADIUS_STEP, MIN_FETCHED_RESTAURANT_BY_ZONE_PER_DAY, MIN_FETCHED_HOSTING_BY_ZONE_PER_DAY, \
-    MIN_FETCHED_TRAIL_BY_ZONE_PER_DAY, MIN_FETCHED_WC_BY_ZONE_PER_DAY, MARIADB_POI_TYPE_TABLE, MARIADB_POI_THEME_TABLE,\
-    NEO4J_PWD, NEO4J_URI, NEO4J_USER, MONGODB_DB, MONGODB_URI, MONGODB_POI_COLLECTION
+    MIN_FETCHED_TRAIL_BY_ZONE_PER_DAY, MIN_FETCHED_WC_BY_ZONE_PER_DAY, MARIADB_POI_TYPE_TABLE, MARIADB_POI_THEME_TABLE
 
 logger = logging.getLogger(__name__)
 
