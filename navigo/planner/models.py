@@ -69,7 +69,7 @@ def db_raw_to_restaurant(db_raw: dict) -> Restaurant:
         )
         result = session.run(query).data()
     if result:
-        #print(f"neo4j result for rest ({db_raw.UUID}) = {result}")
+        # print(f"neo4j result for rest ({db_raw.UUID}) = {result}")
         return Restaurant(
             latitude=result[0]['n']['LATITUDE'],
             longitude=result[0]['n']['LONGITUDE'],
@@ -93,7 +93,7 @@ def db_raw_to_hosting(db_raw: dict) -> Hosting:
         )
         result = session.run(query).data()
     if result:
-        #print(f"neo4j result for hosting ({db_raw.UUID}) = {result}")
+        # print(f"neo4j result for hosting ({db_raw.UUID}) = {result}")
         return Hosting(
             latitude=result[0]['n']['LATITUDE'],
             longitude=result[0]['n']['LONGITUDE'],

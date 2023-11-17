@@ -99,7 +99,6 @@ def get_weather_forecast(request: WeatherRequest):
 def get_weather_forecast_by_zone(zone: int,
                                  trip_start: str,
                                  trip_duration: int) -> bool:
-    # todo => is it possible to take a zip code as input ?
     # logger.info(f"get_weather_forecast_by_zone zone: {zone}")
     ville = get_cityname(zone)
     logger.info(f"get_weather_forecast_by_zone ville: {ville}")
@@ -155,7 +154,7 @@ def get_most_popular_poi_by_zone(zip_code, limit=25, radius=50000) -> list:
     city_name = get_cityname(zip_code)
     raw_pois = explore_venues(
         city_name, FOURESQUARE_POI_CATEGORY_ID, limit, radius)
-    #logger.info(f"raw_pois: {raw_pois}")
+    # logger.info(f"raw_pois: {raw_pois}")
     pois = [
         POI(
             longitude=float(result["geocodes"]["main"]["longitude"]),
@@ -213,7 +212,7 @@ def get_external_data(zone: int,
 # helper APIs to work with cities and zip codes
 ################################################
 
-def get_nearby_communes(postal_code, rayon=10) -> list:
+def get_nearby_communes(postal_code, rayon=10) -> set:
     """
     Returns a list of city returned by the API villes-voisines.fr
 
@@ -293,4 +292,12 @@ def get_cityname(zipcode: int) -> str:
 if __name__ == "__main__":
     print(get_zipcode('bordeaux'))
     from pprint import pprint
-    pprint(get_external_data(33000).top_poi_list)
+    _external_data_test = get_external_data(33000, '2023-11-17', 7)
+    print('############\n =====> TOP POI LIST <=====\n############')
+    pprint(_external_data_test.top_poi_list)
+
+    print('############\n =====> TOP RESTO LIST <=====\n############')
+    pprint(_external_data_test.top_restaurant_list)
+
+    print('############\n =====> WEATHER FORECAST <=====\n############')
+    pprint(_external_data_test.weather_forecast)

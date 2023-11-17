@@ -1,21 +1,16 @@
-import json
 import logging
 
-import requests
 from sqlalchemy import create_engine, text
 from sqlalchemy_utils import database_exists
-from neo4j import GraphDatabase
-from pymongo import MongoClient
 
-from navigo.external.manager import get_nearby_communes
-from navigo.planner.models import InternalNodesData, POI, db_raw_to_poi, db_raw_to_restaurant, db_raw_to_hosting, \
+from navigo.external import get_nearby_communes
+from navigo.planner.models import InternalNodesData, db_raw_to_poi, db_raw_to_restaurant, db_raw_to_hosting, \
     db_raw_to_trail, db_raw_to_wc
 from navigo.settings import MARIADB_USER, MARIADB_PWD, MARIADB_HOST, MARIADB_DB, MARIADB_POI_TABLE, \
     MARIADB_RESTAURANT_TABLE, MARIADB_HOSTING_TABLE, MARIADB_TRAIL_TABLE, MARIADB_WC_TABLE, \
-    MIN_FETCHED_POI_BY_ZONE_PER_DAY, LOOKUP_ITERATIONS_RADIUS_INIT, MAX_LOOKUP_ITERATIONS_FOR_POINTS, \
+    MIN_FETCHED_POI_BY_ZONE_PER_DAY, MAX_LOOKUP_ITERATIONS_FOR_POINTS, \
     LOOKUP_ITERATIONS_RADIUS_STEP, MIN_FETCHED_RESTAURANT_BY_ZONE_PER_DAY, MIN_FETCHED_HOSTING_BY_ZONE_PER_DAY, \
-    MIN_FETCHED_TRAIL_BY_ZONE_PER_DAY, MIN_FETCHED_WC_BY_ZONE_PER_DAY, MARIADB_POI_TYPE_TABLE, MARIADB_POI_THEME_TABLE,\
-    NEO4J_PWD, NEO4J_URI, NEO4J_USER, MONGODB_DB, MONGODB_URI, MONGODB_POI_COLLECTION
+    MIN_FETCHED_TRAIL_BY_ZONE_PER_DAY, MIN_FETCHED_WC_BY_ZONE_PER_DAY, MARIADB_POI_TYPE_TABLE, MARIADB_POI_THEME_TABLE
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +31,7 @@ def get_nearby_communes_as_where_clause(postal_code, rayon=10) -> str:
         A list (on SQL format) of postal codes.
     """
     communes = get_nearby_communes(postal_code, rayon)
-    res = "(" + ",".join(str(n) for n in communes) + ", 33063" + ")" #TODO : ajout spécifique de ce code postal 33063 pour faire marcher sur Bordeaux...
+    res = "(" + ",".join(str(n) for n in communes) + ")"
 
     logger.info(f"restricting search in following communes: {res}")
     return res
@@ -121,7 +116,6 @@ def get_restaurants_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     return restaurant_list
 
 
-# todo return dataclass
 def get_hosting_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     iteration = 0
     hosting_list = []
@@ -218,12 +212,9 @@ def get_wc_by_zone(zone: int, rayon: int, days: int = 1) -> list:
 def get_db_internal_nodes_data_by_zone(zone: int, rayon: int, days: int = 1) -> InternalNodesData:
     return InternalNodesData(
         poi_list=get_poi_by_zone(zone, rayon, days),
-        # restaurant_list=[],
         restaurant_list=get_restaurants_by_zone(zone, rayon, days),
-        # hosting_list=[],
         hosting_list=get_hosting_by_zone(zone, rayon, days),
         trail_list=get_trails_by_zone(zone, rayon, days)
-        # trail_list=[]
     )
 
 
@@ -240,9 +231,6 @@ def get_poi_types() -> list:
             logger.error(f"error while fetching POI types: {e}")
         # logger.info(f"res = {res_dict}")
 
-    # todo: change values
-    # if poi_types and not poi_types[0]:
-    #     poi_types = [{'NAME': 'parc'}, {'NAME': 'museum'}, {'NAME': 'stadium'}, {'NAME': 'jardin'}]
     return poi_types
 
 
@@ -258,7 +246,4 @@ def get_poi_themes() -> list:
         except Exception as e:
             logger.error(f"error while fetching POI themes: {e}")
 
-    # todo: change values
-    # if poi_themes and not poi_themes[0]:
-        # poi_themes = [{'NAME': 'red'}, {'NAME': 'blue'}, {'NAME': 'green'}, {'NAME': 'black'}]
     return poi_themes

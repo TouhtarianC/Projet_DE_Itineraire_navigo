@@ -5,7 +5,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
-import dash
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
@@ -13,13 +12,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
 from pydantic import BaseModel
 
-from navigo.db.manager import get_restaurants_by_zone, get_poi_by_zone, get_hosting_by_zone, get_trails_by_zone, \
+from navigo.db import get_restaurants_by_zone, get_poi_by_zone, get_hosting_by_zone, get_trails_by_zone, \
     get_wc_by_zone
-from navigo.external.manager import get_zipcode
-from navigo.map.dash_app import create_dash_app
+from navigo.external import get_zipcode
+from navigo.map import create_dash_app
 from navigo.planner.models import UserData
 from navigo.planner.planner import plan_trip
-from navigo.db.manager import get_poi_types, get_poi_themes
+from navigo.db import get_poi_types, get_poi_themes
 
 
 logger = logging.getLogger(__name__)
@@ -103,8 +102,6 @@ class UserTripRequestInput(BaseModel):
         )
 
 
-# todo: add api de plannnification de trip mais retour json
-# todo : integrate city to code postal
 # POST endpoint to get recommendations
 @app.post("/recommendations/")
 async def create_trip_recommendations(user_request_input: UserTripRequestInput):
@@ -130,70 +127,75 @@ async def create_trip_recommendations(user_request_input: UserTripRequestInput):
 
 # Technical APIs to fetch DATA
 @app.get("/data/pois")
-async def get_pois(zip_code: Annotated[str, 'zip code']):
+async def get_pois(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'rayon']):
     try:
         _zip_code = int(zip_code)
+        _rayon = int(rayon)
     except Exception as e:
         logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
-    res = get_poi_by_zone(_zip_code)
+    res = get_poi_by_zone(_zip_code, _rayon)
     res = [dataclasses.asdict(r) for r in res]
 
     return res
 
 
 @app.get("/data/restaurants")
-async def get_restaurants(zip_code: Annotated[str, 'zip code']):
+async def get_restaurants(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'rayon']):
     try:
         _zip_code = int(zip_code)
+        _rayon = int(rayon)
     except Exception as e:
         logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
-    res = get_restaurants_by_zone(_zip_code)
+    res = get_restaurants_by_zone(_zip_code, _rayon)
     res = [dataclasses.asdict(r) for r in res]
 
     return res
 
 
 @app.get("/data/hostings")
-async def get_hosting(zip_code: Annotated[str, 'zip code']):
+async def get_hosting(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'rayon']):
     try:
         _zip_code = int(zip_code)
+        _rayon = int(rayon)
     except Exception as e:
         logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
-    res = get_hosting_by_zone(_zip_code)
+    res = get_hosting_by_zone(_zip_code, _rayon)
     res = [dataclasses.asdict(r) for r in res]
 
     return res
 
 
 @app.get("/data/trails")
-async def get_trails(zip_code: Annotated[str, 'zip code']):
+async def get_trails(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'rayon']):
     try:
         _zip_code = int(zip_code)
+        _rayon = int(rayon)
     except Exception as e:
         logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
-    res = get_trails_by_zone(_zip_code)
+    res = get_trails_by_zone(_zip_code, _rayon)
     res = [dataclasses.asdict(r) for r in res]
 
     return res
 
 
 @app.get("/data/wcs")
-async def get_wcs(zip_code: Annotated[str, 'zip code']):
+async def get_wcs(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'rayon']):
     try:
         _zip_code = int(zip_code)
+        _rayon = int(rayon)
     except Exception as e:
         logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
-    res = get_wc_by_zone(_zip_code)
+    res = get_wc_by_zone(_zip_code, _rayon)
     res = [dataclasses.asdict(r) for r in res]
 
     return res

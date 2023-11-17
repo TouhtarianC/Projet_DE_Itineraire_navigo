@@ -50,3 +50,5 @@ FOURESQUARE_API_URL = config('FOURESQUARE_API_URL', default="https://api.foursqu
 FOURESQUARE_POI_CATEGORY_ID = config('FOURESQUARE_POI_CATEGORY_ID', default="10000", cast=str)
 # Dining and Drinking
 FOURESQUARE_RESTAURANT_CATEGORY_ID = config('FOURESQUARE_RESTAURANT_CATEGORY_ID', default="13000", cast=str)
+
+DASH_TOKEN = config('DASH_TOKEN', default="pk.eyJ1IjoiaGF6ZW1hbWFyYSIsImEiOiJjbGt2cmV6YXAwMGRlM3BwcGV0dHVjNW5kIn0.9ZSlxSY240CuAUQ1btlWuw", cast=str)
