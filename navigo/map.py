@@ -177,8 +177,10 @@ def create_dash_app(geospatial_point_list) -> dash.Dash:
     df['latitude'] = df['latitude'].astype(float)
     df['longitude'] = df['longitude'].astype(float)
 
-    print(f'df : {df}')
+    # print(f'df : {df}')
     # print(f'df_type : {df.dtypes}')
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        print(df)
 
     fig = create_figure(df)
     fig.show()

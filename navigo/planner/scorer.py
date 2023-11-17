@@ -9,7 +9,7 @@ class ScoringRules:
         self.user_preference_weight = user_preference_weight
         self.popularity_weight = popularity_weight
         self.notation_weight = notation_weight
-        self.weather_weight = weather_weight
+        self.weather_weight = weather_weight  # todo tag interal activities
 
 
 def is_internal_activity(activity_type_name: str):
