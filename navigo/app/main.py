@@ -127,70 +127,75 @@ async def create_trip_recommendations(user_request_input: UserTripRequestInput):
 
 # Technical APIs to fetch DATA
 @app.get("/data/pois")
-async def get_pois(zip_code: Annotated[str, 'zip code']):
+async def get_pois(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'rayon']):
     try:
         _zip_code = int(zip_code)
+        _rayon = int(rayon)
     except Exception as e:
         logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
-    res = get_poi_by_zone(_zip_code)
+    res = get_poi_by_zone(_zip_code, _rayon)
     res = [dataclasses.asdict(r) for r in res]
 
     return res
 
 
 @app.get("/data/restaurants")
-async def get_restaurants(zip_code: Annotated[str, 'zip code']):
+async def get_restaurants(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'rayon']):
     try:
         _zip_code = int(zip_code)
+        _rayon = int(rayon)
     except Exception as e:
         logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
-    res = get_restaurants_by_zone(_zip_code)
+    res = get_restaurants_by_zone(_zip_code, _rayon)
     res = [dataclasses.asdict(r) for r in res]
 
     return res
 
 
 @app.get("/data/hostings")
-async def get_hosting(zip_code: Annotated[str, 'zip code']):
+async def get_hosting(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'rayon']):
     try:
         _zip_code = int(zip_code)
+        _rayon = int(rayon)
     except Exception as e:
         logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
-    res = get_hosting_by_zone(_zip_code)
+    res = get_hosting_by_zone(_zip_code, _rayon)
     res = [dataclasses.asdict(r) for r in res]
 
     return res
 
 
 @app.get("/data/trails")
-async def get_trails(zip_code: Annotated[str, 'zip code']):
+async def get_trails(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'rayon']):
     try:
         _zip_code = int(zip_code)
+        _rayon = int(rayon)
     except Exception as e:
         logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
-    res = get_trails_by_zone(_zip_code)
+    res = get_trails_by_zone(_zip_code, _rayon)
     res = [dataclasses.asdict(r) for r in res]
 
     return res
 
 
 @app.get("/data/wcs")
-async def get_wcs(zip_code: Annotated[str, 'zip code']):
+async def get_wcs(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'rayon']):
     try:
         _zip_code = int(zip_code)
+        _rayon = int(rayon)
     except Exception as e:
         logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
-    res = get_wc_by_zone(_zip_code)
+    res = get_wc_by_zone(_zip_code, _rayon)
     res = [dataclasses.asdict(r) for r in res]
 
     return res
