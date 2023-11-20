@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
+import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
@@ -115,9 +116,10 @@ async def create_trip_recommendations(user_request_input: UserTripRequestInput):
         logger.info(f"result: {geospatial_point_list}")
 
         # create and serve Dash app
+        _dash_app = create_dash_app(geospatial_point_list)
         app.mount(
             "/dash", WSGIMiddleware(
-                create_dash_app(geospatial_point_list).server))
+                _dash_app.server))
 
         return
     except Exception as e:
@@ -202,3 +204,6 @@ async def get_wcs(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'r
 
 # todo api du modèle ML ?
 # todo: dependeing on mean of transport => define search zone
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, log_level="info")
