@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
+import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
@@ -203,3 +204,6 @@ async def get_wcs(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'r
 
 # todo api du modèle ML ?
 # todo: dependeing on mean of transport => define search zone
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, log_level="info")
