@@ -115,9 +115,10 @@ async def create_trip_recommendations(user_request_input: UserTripRequestInput):
         logger.info(f"result: {geospatial_point_list}")
 
         # create and serve Dash app
+        _dash_app = create_dash_app(geospatial_point_list)
         app.mount(
             "/dash", WSGIMiddleware(
-                create_dash_app(geospatial_point_list).server))
+                _dash_app.server))
 
         return
     except Exception as e:

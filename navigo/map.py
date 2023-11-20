@@ -183,11 +183,11 @@ def create_dash_app(geospatial_point_list) -> dash.Dash:
         print(df)
 
     fig = create_figure(df)
-    fig.show()
+    # fig.show()
 
     print("fig created OK")
 
-    app = Dash()
+    app = Dash(__name__, requests_pathname_prefix='/dash/')
     app.layout = html.Div([
         dcc.Dropdown(
             id='day-dropdown',
@@ -212,6 +212,9 @@ def create_dash_app(geospatial_point_list) -> dash.Dash:
             filtered_df = df[df['day'] == int(selected_day)]
         new_fig = create_figure(filtered_df)
         return new_fig
+
+    # print(app.server.__dict__)
+    print('returning app')
 
     return app
 
