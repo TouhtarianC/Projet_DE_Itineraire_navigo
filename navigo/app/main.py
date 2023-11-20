@@ -205,5 +205,10 @@ async def get_wcs(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'r
 # todo api du modèle ML ?
 # todo: dependeing on mean of transport => define search zone
 
+
+def main():
+    uvicorn.run("navigo.app.main:app", host="0.0.0.0", port=8000, log_level="info")
+
+
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, log_level="info")
+    main()

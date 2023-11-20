@@ -7,11 +7,13 @@ from pkg_resources import parse_requirements
 # Allow to run setup.py from another directory.
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-VERSION = '0.0.2'
+VERSION = '0.0.5'
 
 # include data files in package
 data_files = ['requirements.txt']
 # data_files.extend(glob.glob('raft_core/py.typed', recursive=True))
+data_files.extend(glob.glob('navigo/app/static/**/*.*', recursive=True))
+data_files.extend(glob.glob('navigo/app/templates/*.*', recursive=True))
 
 
 with open("README.md", "r", encoding="utf-8") as readme_file:
@@ -48,5 +50,10 @@ setup(
     data_files=data_files,
     include_package_data=True,
     install_requires=install_requires,
-    zip_safe=False
+    zip_safe=False,
+    entry_points={
+        'console_scripts': [
+            'navigo = navigo.app.main:main',
+        ]
+    }
 )
