@@ -172,7 +172,7 @@
             progressBarContainer.style.height = '15px';
             progressBarContainer.style.backgroundColor = '#ccc';
             progressBarContainer.style.position = 'fixed';
-            progressBarContainer.style.top = '630px';
+            progressBarContainer.style.top = 'calc(50% + 240px)';
             progressBarContainer.style.left = '50%';
             progressBarContainer.style.transform = 'translateX(-50%)';
 
@@ -199,7 +199,7 @@
               if (progress === 100) {
                 clearInterval(progressBarAnimation);
               }
-            }, 350); // 350 milliseconds for each progress step => total wait of 35 seconds
+            }, 450); // 450 milliseconds for each progress step => total wait of 45 seconds
 
             // Capture the selected options in an array
             const selectedPoiTypeOptions = Array.from(favoritePoiTypeList.selectedOptions).map(option => option.value);
