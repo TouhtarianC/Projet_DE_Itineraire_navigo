@@ -22,6 +22,22 @@
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
         }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5); /* Fond semi-transparent gris */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; /* Z-index élevé pour s'assurer que l'overlay est au-dessus de tout */
+        }
+        .overlay img {
+            width: 250px; /* Ajustez la taille du gif selon vos besoins */
+            height: 550px;
+        }
         h1 {
             text-align: center;
             color: #f39c12;
@@ -127,6 +143,11 @@
         <input type="number" name="days_on_hiking" id="days_on_hiking" value="0">
         <br>
 
+        <!-- Overlay pour afficher le gif -->
+        <div id="loadingOverlay" class="overlay" style="display: none;">
+            <img src="/static/img/XOsX.gif" alt="Loading...">
+        </div>
+
         <button type="submit" id="submitBtn">Plan My Trip</button>
     </form>
     </div>
@@ -140,6 +161,10 @@
 
         submitBtn.addEventListener('click', async (event) => {
             event.preventDefault(); // Prevent the default form submission
+
+            // Show the loading spinner and disable submit
+            submitBtn.disabled = true;
+            document.getElementById('loadingOverlay').style.display = 'flex';
 
             // Capture the selected options in an array
             const selectedPoiTypeOptions = Array.from(favoritePoiTypeList.selectedOptions).map(option => option.value);
@@ -173,6 +198,10 @@
 
             const result = await response.json();
             console.log(result);
+
+            // Hide the loading spinner and enable submit
+            submitBtn.disabled = false;
+            document.getElementById('loadingOverlay').style.display = 'none';
 
             // Redirect the user to the /dash endpoint
             window.location.href = '/dash';
