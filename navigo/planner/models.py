@@ -24,6 +24,26 @@ class GeospatialPoint:
     day: int | None = None
     rank: int | None = None
 
+    def __init__(self, longitude, latitude, city, city_code, type, name, 
+                 category, notation, score, uuid, cluster):
+        self.longitude = longitude
+        self.latitude = latitude
+        self.city = city
+        self.city_code = city_code
+        self.type = type 
+        self.name = name
+        self.category = category
+        self.notation = notation
+        self.score = score
+        self.uuid = uuid
+        self.cluster = cluster
+    
+    def __copy__(self):
+        return GeospatialPoint(self.longitude, self.latitude, self.city, 
+                               self.city_code, self.type, self.name, self.category, self.notation, 
+                               self.score, self.uuid, self.cluster)
+
+
 
 @dataclass
 class POI(GeospatialPoint):
