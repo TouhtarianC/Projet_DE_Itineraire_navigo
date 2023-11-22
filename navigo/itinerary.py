@@ -170,7 +170,7 @@ def find_next_poi_from_other(start_uuid, start_type, cluster=None):
 # Find next restaurant to have lunch or dinner after POI
 def find_next_restaurant_from_poi(start_uuid, start_type):
     
-    ray_f = 500
+    ray_f = 200
     n = find_stop_around_number(start_uuid, start_type, "Restaurant2", ray_f)
     
     while (ray_f < 20000 and n < 3):
@@ -211,7 +211,7 @@ def find_next_restaurant_from_poi(start_uuid, start_type):
 # Find next hosting to stay after a restaurant
 def find_next_hosting_from_restaurant(start_uuid, start_type):
     
-    ray_f = 500
+    ray_f = 200
     n = find_stop_around_number(start_uuid, start_type, "Hosting2", ray_f)
     
     while (ray_f < 20000 and n < 3):
