@@ -6,12 +6,14 @@ from pathlib import Path
 from typing import Annotated
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Query, Depends
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
 from pydantic import BaseModel
+
+from navigo.app.paginate import PageParams, PagedResponseSchema, paginate
 
 from navigo.db import get_restaurants_by_zone, get_poi_by_zone, get_hosting_by_zone, get_trails_by_zone, \
     get_wc_by_zone, get_poi_types, get_poi_themes, get_restaurants_types, get_hostings_types
@@ -19,26 +21,23 @@ from navigo.external import get_zipcode
 from navigo.map import create_dash_app
 from navigo.planner.models import UserData
 from navigo.planner.planner import plan_trip
+from navigo.settings import DEBUG
 
+from navigo.planner.models import POI, Restaurant, Hosting, Trail, WC
 
 logger = logging.getLogger(__name__)
 
 
-app = FastAPI()
-app.mount("/static",
-          StaticFiles(directory=str(
-              Path(Path(__file__).resolve().parent, 'static'))
-          ))
+app = FastAPI(debug=DEBUG)
+# app.mount("/static",
+#           StaticFiles(directory=str(
+#               Path(Path(__file__).resolve().parent, 'static'))
+#           ))
 
 templates = Jinja2Templates(
     directory=str(
         Path(Path(__file__).resolve().parent, 'templates'))
 )
-
-
-@app.get("/favicon.ico")
-async def get_favicon():
-    return FileResponse("static/img/favicon.ico")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -128,8 +127,19 @@ async def create_trip_recommendations(user_request_input: UserTripRequestInput):
 
 
 # Technical APIs to fetch DATA
-@app.get("/data/pois")
-async def get_pois(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'rayon']):
+@app.get("/favicon.ico")
+async def get_favicon():
+    return FileResponse("navigo/app/static/img/favicon.ico", 200)
+
+
+
+@app.get("/data/pois", response_model=PagedResponseSchema[POI])
+async def get_pois(
+    zip_code: Annotated[str, 'zip code'],
+    rayon: Annotated[str, 'rayon'],
+    request: Request,
+    page_params: PageParams = Depends()
+):
     try:
         _zip_code = int(zip_code)
         _rayon = int(rayon)
@@ -138,13 +148,24 @@ async def get_pois(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, '
         raise HTTPException(status_code=500, detail=str(e))
 
     res = get_poi_by_zone(_zip_code, _rayon)
-    res = [dataclasses.asdict(r) for r in res]
+    if res is None:
+        logger.warning(f"no POI found for zone {_zip_code} with rayon {_rayon}")
+        raise HTTPException(status_code=404, detail="no POI found for this zone")
+    try:
+        res = [dataclasses.asdict(r) for r in res]
+    except TypeError as e:
+        logger.error(f"unable to convert POI to dict: {res}")
+        raise HTTPException(status_code=500, detail=str(e))
+    return paginate(page_params, res, POI)
 
-    return res
 
-
-@app.get("/data/restaurants")
-async def get_restaurants(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'rayon']):
+@app.get("/data/restaurants", response_model=PagedResponseSchema[Restaurant])
+async def get_restaurants(
+    zip_code: Annotated[str, 'zip code'],
+    rayon: Annotated[str, 'rayon'],
+    request: Request,
+    page_params: PageParams = Depends()
+):
     try:
         _zip_code = int(zip_code)
         _rayon = int(rayon)
@@ -155,11 +176,16 @@ async def get_restaurants(zip_code: Annotated[str, 'zip code'], rayon: Annotated
     res = get_restaurants_by_zone(_zip_code, _rayon)
     res = [dataclasses.asdict(r) for r in res]
 
-    return res
+    return paginate(page_params, res, Restaurant)
 
 
-@app.get("/data/hostings")
-async def get_hosting(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'rayon']):
+@app.get("/data/hostings", response_model=PagedResponseSchema[Hosting])
+async def get_hosting(
+    zip_code: Annotated[str, 'zip code'],
+    rayon: Annotated[str, 'rayon'],
+    request: Request,
+    page_params: PageParams = Depends()
+):
     try:
         _zip_code = int(zip_code)
         _rayon = int(rayon)
@@ -170,11 +196,16 @@ async def get_hosting(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str
     res = get_hosting_by_zone(_zip_code, _rayon)
     res = [dataclasses.asdict(r) for r in res]
 
-    return res
+    return paginate(page_params, res, Hosting)
 
 
-@app.get("/data/trails")
-async def get_trails(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'rayon']):
+@app.get("/data/trails", response_model=PagedResponseSchema[Trail])
+async def get_trails(
+    zip_code: Annotated[str, 'zip code'],
+    rayon: Annotated[str, 'rayon'],
+    request: Request,
+    page_params: PageParams = Depends()
+):
     try:
         _zip_code = int(zip_code)
         _rayon = int(rayon)
@@ -185,11 +216,16 @@ async def get_trails(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str,
     res = get_trails_by_zone(_zip_code, _rayon)
     res = [dataclasses.asdict(r) for r in res]
 
-    return res
+    return paginate(page_params, res, Trail)
 
 
-@app.get("/data/wcs")
-async def get_wcs(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'rayon']):
+@app.get("/data/wcs", response_model=PagedResponseSchema[WC])
+async def get_wcs(
+    zip_code: Annotated[str, 'zip code'],
+    rayon: Annotated[str, 'rayon'],
+    request: Request,
+    page_params: PageParams = Depends()
+):
     try:
         _zip_code = int(zip_code)
         _rayon = int(rayon)
@@ -200,7 +236,7 @@ async def get_wcs(zip_code: Annotated[str, 'zip code'], rayon: Annotated[str, 'r
     res = get_wc_by_zone(_zip_code, _rayon)
     res = [dataclasses.asdict(r) for r in res]
 
-    return res
+    return paginate(page_params, res, WC)
 
 # todo api du modèle ML ?
 # todo: dependeing on mean of transport => define search zone
