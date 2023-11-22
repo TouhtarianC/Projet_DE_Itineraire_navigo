@@ -166,6 +166,41 @@
             submitBtn.disabled = true;
             document.getElementById('loadingOverlay').style.display = 'flex';
 
+            // Create a progress bar container
+            const progressBarContainer = document.createElement('div');
+            progressBarContainer.style.width = '100px'; // Adjust the width as needed
+            progressBarContainer.style.height = '15px';
+            progressBarContainer.style.backgroundColor = '#ccc';
+            progressBarContainer.style.position = 'fixed';
+            progressBarContainer.style.top = 'calc(50% + 240px)';
+            progressBarContainer.style.left = '50%';
+            progressBarContainer.style.transform = 'translateX(-50%)';
+
+            // Create the empty progress bar
+            const progressBar = document.createElement('div');
+            progressBar.style.width = '0px'; // Initially empty
+            progressBar.style.height = '15px';
+            progressBar.style.backgroundColor = '#f39c12';
+            progressBar.style.position = 'absolute';
+            progressBar.style.top = '0';
+            progressBar.style.left = '0';
+
+            progressBarContainer.appendChild(progressBar);
+
+            // Append the progress bar container to the body
+            document.body.appendChild(progressBarContainer);
+
+            // Start the progress animation
+            const progressBarAnimation = setInterval(() => {
+              let progress = parseInt(progressBar.style.width);
+              progress += 1;
+              progressBar.style.width = progress + 'px';
+
+              if (progress === 100) {
+                clearInterval(progressBarAnimation);
+              }
+            }, 450); // 450 milliseconds for each progress step => total wait of 45 seconds
+
             // Capture the selected options in an array
             const selectedPoiTypeOptions = Array.from(favoritePoiTypeList.selectedOptions).map(option => option.value);
             const selectedPoiThemeOptions = Array.from(favoritePoiThemeList.selectedOptions).map(option => option.value);
