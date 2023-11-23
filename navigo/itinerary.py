@@ -4,6 +4,7 @@ from navigo.planner.models import GeospatialPoint, POI, Hosting, Restaurant, Tra
 from navigo.settings import NEO4J_URI, NEO4J_USER, NEO4J_PWD
 import time
 import logging
+import copy
 
 
 driver = GraphDatabase.driver(
@@ -25,7 +26,6 @@ def clear_relationships(relationship_type):
 
 # for testing purpose (eg using __main__)
 def duplicate_nodes():
-
     for type in ['restaurant', 'hosting']:
         queryDuplicate = (
             f"MATCH (p:{type}) \
@@ -33,429 +33,241 @@ def duplicate_nodes():
             SET c += properties(p) \
             SET c.LATITUDE = toFloat(p.LATITUDE) \
             SET c.LONGITUDE = toFloat(p.LONGITUDE) \
-            SET c.UUID = p.uuid \
+            SET c.SCORE = 0 \
             SET c.TYPE = '{type.upper()}'; \
             ")
-
         with driver.session() as session:
             session.run(queryDuplicate)
 
 # Create nodes for POIs, Restaurants, Hostings, and Trails
-
-
 def create_nodes(poi_list, restaurant_list, hosting_list, trail_list):
 
-    for node in poi_list + restaurant_list + hosting_list + trail_list:
-        # copy of new nodes and labels in upper to be consistent with neo4j db
-        node_type = node.type+'2'
-        params_node = {key.upper(): asdict(
-            node)[key] for key in asdict(node).keys()}
-        query = (
-            f"CREATE (p:{node_type} $params)\
-            SET p.LATITUDE = toFloat(p.LATITUDE) \
-            SET p.LONGITUDE = toFloat(p.LONGITUDE) \
-            ;"
-        )
-        with driver.session() as session:
+    with driver.session() as session:
+        for node in poi_list + restaurant_list + hosting_list + trail_list:
+            # copy of new nodes and labels in upper to be consistent with neo4j db
+            node_type = node.type+'2'
+            params_node = {key.upper(): asdict(
+                node)[key] for key in asdict(node).keys()}
+            query = (
+                f"CREATE (p:{node_type} $params)\
+                SET p.LATITUDE = toFloat(p.LATITUDE) \
+                SET p.LONGITUDE = toFloat(p.LONGITUDE) \
+                ;"
+            )
             session.run(query, params=params_node)
-
 
 # Identify a POI among a list with its uuid, return a POI
 def find_node_by_uuid(poi_list, uuid):
-    return next((poi for poi in poi_list if poi.uuid == uuid), None)
+    res = next((poi for poi in poi_list if poi.uuid == uuid), None)
+
+    if res != None:
+        return copy.copy(res)
+    else:
+        return None
 
 
-# Identify a POI among a list with its day and its rank, return a POI
-def find_node_by_day_rank(poi_list, day, rank):
-    return next((poi for poi in poi_list if poi.day == day and poi.rank == rank), None)
-
-# Identify 4 nodes, before looking for lunch, dinner and hotel, return a tuple of 4 POI
-
-
-def find_nodes_by_steps(poi_list, day, n_pois_to_visit):
-    poi_before_lunch, poi_after_lunch, poi_before_diner, poi_after_hosting = None, None, None, None
-    match n_pois_to_visit:
-        case 4:
-            poi_before_lunch = find_node_by_day_rank(poi_list, day, 2)
-            poi_after_lunch = find_node_by_day_rank(poi_list, day, 3)
-            poi_before_diner = find_node_by_day_rank(poi_list, day, 4)
-            poi_after_hosting = find_node_by_day_rank(poi_list, day+1, 1)
-        case 3:
-            poi_before_lunch = find_node_by_day_rank(poi_list, day, 2)
-            poi_after_lunch = find_node_by_day_rank(poi_list, day, 3)
-            poi_before_diner = poi_after_lunch
-            poi_after_hosting = find_node_by_day_rank(poi_list, day+1, 1)
-        case 2:
-            poi_before_lunch = find_node_by_day_rank(poi_list, day, 1)
-            poi_after_lunch = find_node_by_day_rank(poi_list, day, 2)
-            poi_before_diner = poi_after_lunch
-            poi_after_hosting = find_node_by_day_rank(poi_list, day+1, 1)
-        case 1:
-            poi_before_lunch = find_node_by_day_rank(poi_list, day, 1)
-            poi_after_lunch = find_node_by_day_rank(poi_list, day+1, 1)
-            poi_before_diner = poi_after_lunch
-            poi_after_hosting = poi_after_lunch
-
-    return poi_before_lunch, poi_after_lunch, poi_before_diner, poi_after_hosting
-
-# Identify uuids from POIs of a same cluster, return a tuple of 2 lists : uuids from a same cluster, all other uuids
-
-
-def find_uuids_by_cluster(poi_list, cluster):
-    uuid_list_cluster = [
-        poi.uuid for poi in poi_list if poi.cluster == cluster]
-    uuid_list_other = [poi.uuid for poi in poi_list if poi.cluster != cluster]
-    return uuid_list_cluster, uuid_list_other
-
-
-# find the number of nodes according to a ray
-# e.g. find "start" with its uuid, end with its uuid and all the possible "stop"
-#       then find all "stop" that meet the requirements of a distance < ray
-#       finally return a number : nb
-def find_next_stop_number(source, target, stop_type, ray):
-    source_type = source.type + '2'
-    target_type = target.type + '2'
-    find_type = stop_type + '2'
-
-    queryfindNextStopNumber = (
-        f"MATCH (start:{source_type} {{UUID: '{source.uuid}'}}) \
-        MATCH (end:{target_type} {{UUID: '{target.uuid}'}}) \
-        MATCH (stop:{find_type}) \
-        WITH \
-            point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}) AS startPoint, \
-            point({{longitude: end.LONGITUDE, latitude: end.LATITUDE}}) AS endPoint, \
-            point({{longitude: stop.LONGITUDE, latitude: stop.LATITUDE}}) AS stopPoint, \
-            stop.LONGITUDE as stop_lon, stop.LATITUDE as stop_lat, \
-            start, end, stop \
-        WHERE stop.LONGITUDE=stop_lon and stop.LATITUDE=stop_lat \
-            and round(point.distance(startPoint, stopPoint))<{ray} \
-            and round(point.distance(stopPoint, endPoint))<{ray} \
-        RETURN COUNT(stop) AS nb; \
-    ")
-
-    with driver.session() as session:
-        res = session.run(queryfindNextStopNumber).data()
-
-    return res[0]['nb']
-
-
-# Compute next POI to visit, and return the next UUID and CLUSTER
-# e.g. find "start" with its uuid, and all the possible "m" that are different from "start" and in a list of uuids
-#       then find "end" that meet the requirements of a distance = dist_min
-#       finally return a UUID and a CLUSTER
-def compute_next_nearest_poi(source, remain_uuid):
-
+# Find next POI to visit after a previous POI
+def find_next_poi_from_poi(start_uuid):
+    
     queryCreateToNextPOI = (
-        f"MATCH (start:POI2 {{UUID:'{source.uuid}'}}) \
-        MATCH (m:POI2) WHERE m.UUID <> start.UUID and m.UUID in {remain_uuid} \
+        f"MATCH (start:POI2 {{UUID:'{start_uuid}'}}) \
+        MATCH (m:POI2) WHERE m.UUID <> start.UUID \
+            AND m.CLUSTER = start.CLUSTER \
+            AND NOT EXISTS(()-[]->(m)) AND NOT EXISTS((m)-[]->()) \
         WITH \
             min(round(point.distance( \
                 point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
                 point({{longitude: m.LONGITUDE, latitude: m.LATITUDE}}) \
             ))) as dist_min, start \
         MATCH (end:POI2) WHERE end.UUID <> start.UUID \
-            and end.UUID in {remain_uuid} \
-            and round(point.distance( \
+            AND end.CLUSTER = start.CLUSTER \
+            AND NOT EXISTS(()-[]->(end)) AND NOT EXISTS((end)-[]->()) \
+            AND round(point.distance( \
                 point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
                 point({{longitude: end.LONGITUDE, latitude: end.LATITUDE}}) \
                 )) = dist_min \
+        WITH start, end \
+        ORDER BY dist_min ASC \
+        LIMIT 1 \
         MERGE (start)-[r:TO_NEXT_POI]->(end) \
-        SET r.DISTANCE=dist_min \
+        SET r.DISTANCE=round(point.distance( \
+                point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
+                point({{longitude: end.LONGITUDE, latitude: end.LATITUDE}}) \
+                )) \
         RETURN end; \
     ")
-
+    
     with driver.session() as session:
         res = session.run(queryCreateToNextPOI).data()
+    res = res[0]['end']
+    return res['UUID']
 
+
+# Find next POI to visit after a restaurant or a hosting
+def find_next_poi_from_other(start_uuid, start_type, cluster=None):
+    
+    # when we have to find a POI after a restaurant, we have to memorize in which cluster the last POI was
+    if cluster != None: 
+        queryCreateToNextPOI = (
+            f"MATCH (start:{start_type} {{UUID:'{start_uuid}'}}) \
+            MATCH (m:POI2) WHERE m.UUID <> start.UUID \
+                AND NOT EXISTS(()-[]->(m)) AND NOT EXISTS((m)-[]->()) \
+                AND m.CLUSTER = {cluster} \
+            WITH \
+                min(round(point.distance( \
+                    point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
+                    point({{longitude: m.LONGITUDE, latitude: m.LATITUDE}}) \
+                ))) as dist_min, start \
+            MATCH (end:POI2) WHERE end.UUID <> start.UUID \
+                AND NOT EXISTS(()-[]->(end)) AND NOT EXISTS((end)-[]->()) \
+                AND round(point.distance( \
+                    point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
+                    point({{longitude: end.LONGITUDE, latitude: end.LATITUDE}}) \
+                    )) = dist_min \
+            WITH start, end \
+            ORDER BY dist_min ASC \
+            LIMIT 1 \
+            MERGE (start)-[r:TO_NEXT_POI]->(end) \
+            SET r.DISTANCE=round(point.distance( \
+                    point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
+                    point({{longitude: end.LONGITUDE, latitude: end.LATITUDE}}) \
+                    )) \
+            RETURN end; \
+        ")
+    # when we have to find a POI after a hosting, there's no need to know the cluster as it will e a new one (eg a day after)
+    else:
+        queryCreateToNextPOI = (
+            f"MATCH (start:{start_type} {{UUID:'{start_uuid}'}}) \
+            MATCH (m:POI2) WHERE m.UUID <> start.UUID \
+                AND NOT EXISTS(()-[]->(m)) AND NOT EXISTS((m)-[]->()) \
+            WITH \
+                min(round(point.distance( \
+                    point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
+                    point({{longitude: m.LONGITUDE, latitude: m.LATITUDE}}) \
+                ))) as dist_min, start \
+            MATCH (end:POI2) WHERE end.UUID <> start.UUID \
+                AND NOT EXISTS(()-[]->(end)) AND NOT EXISTS((end)-[]->()) \
+                AND round(point.distance( \
+                    point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
+                    point({{longitude: end.LONGITUDE, latitude: end.LATITUDE}}) \
+                    )) = dist_min \
+            WITH start, end \
+            ORDER BY dist_min ASC \
+            LIMIT 1 \
+            MERGE (start)-[r:TO_NEXT_POI]->(end) \
+            SET r.DISTANCE=round(point.distance( \
+                    point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
+                    point({{longitude: end.LONGITUDE, latitude: end.LATITUDE}}) \
+                    )) \
+            RETURN end; \
+        ")
+    with driver.session() as session:
+        res = session.run(queryCreateToNextPOI).data()
     res = res[0]['end']
     return res['UUID'], res['CLUSTER']
 
 
-# Compute next stop (a restaurant or a hosting)
-def compute_next_nearest_stop(source, target, stop_type):
-
+# Find next restaurant to have lunch or dinner after POI
+def find_next_restaurant_from_poi(start_uuid, start_type):
+    
     ray_f = 200
-    n = find_next_stop_number(source, target, stop_type, ray_f)
-
+    n = find_stop_around_number(start_uuid, start_type, "Restaurant2", ray_f)
+    
     while (ray_f < 20000 and n < 3):
-        ray_f += 50
-        n = find_next_stop_number(source, target, stop_type, ray_f)
+        ray_f += 100
+        n = find_stop_around_number(start_uuid, start_type, "Restaurant2", ray_f)
+    queryCreateToNextRestaurant = (
+        f"MATCH (start:{start_type} {{UUID:'{start_uuid}'}}) \
+        MATCH (m:Restaurant2) \
+        WHERE round(point.distance( \
+                point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
+                point({{longitude: m.LONGITUDE, latitude: m.LATITUDE}}) \
+                )) <= {ray_f} \
+        WITH \
+            max(m.SCORE) as score_max, start \
+        MATCH (end:Restaurant2) \
+        WHERE round(point.distance( \
+                point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
+                point({{longitude: end.LONGITUDE, latitude: end.LATITUDE}}) \
+                )) <= {ray_f} \
+            AND end.SCORE = score_max \
+        WITH start, end \
+        ORDER BY score_max DESC \
+        LIMIT 1 \
+        MERGE (start)-[r:TO_NEXT_RESTAURANT]->(end) \
+        SET r.DISTANCE=round(point.distance( \
+                point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
+                point({{longitude: end.LONGITUDE, latitude: end.LATITUDE}}) \
+                )) \
+        RETURN end; \
+    ")
+    
+    with driver.session() as session:
+        res = session.run(queryCreateToNextRestaurant).data()
+    res = res[0]['end']
+    return res['UUID']
 
-    queryCreateRelationshipFromPOIToRestaurant = (
-        f"MATCH (start:POI2 {{UUID:'{source.uuid}'}}) \
-        MATCH (end:POI2 {{UUID:'{target.uuid}'}}) \
-        MATCH (stop:Restaurant2) \
+
+# Find next hosting to stay after a restaurant
+def find_next_hosting_from_restaurant(start_uuid, start_type):
+    
+    ray_f = 200
+    n = find_stop_around_number(start_uuid, start_type, "Hosting2", ray_f)
+    
+    while (ray_f < 20000 and n < 3):
+        ray_f += 100
+        n = find_stop_around_number(start_uuid, start_type, "Hosting2", ray_f)
+    queryCreateToNextHosting = (
+        f"MATCH (start:{start_type} {{UUID:'{start_uuid}'}}) \
+        MATCH (m:Hosting2) \
+        WHERE round(point.distance( \
+                point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
+                point({{longitude: m.LONGITUDE, latitude: m.LATITUDE}}) \
+                )) <= {ray_f} \
+        WITH \
+            max(m.SCORE) as score_max, start \
+        MATCH (end:Hosting2) \
+        WHERE round(point.distance( \
+                point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
+                point({{longitude: end.LONGITUDE, latitude: end.LATITUDE}}) \
+                )) <= {ray_f} \
+            AND end.SCORE = score_max \
+        WITH start, end \
+        ORDER BY score_max DESC \
+        LIMIT 1 \
+        MERGE (start)-[r:TO_NEXT_HOSTING]->(end) \
+        SET r.DISTANCE=round(point.distance( \
+                point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
+                point({{longitude: end.LONGITUDE, latitude: end.LATITUDE}}) \
+                )) \
+        RETURN end; \
+    ")
+    
+    with driver.session() as session:
+        res = session.run(queryCreateToNextHosting).data()
+    res = res[0]['end']
+    return res['UUID']
+
+
+# Find the number of potential restaurants or hosting in a defined ray
+# They will be later filtered by the best score within this ray
+def find_stop_around_number(start_uuid, start_type, stop_type, ray):
+    
+    queryfindNextStopNumber = (
+        f"MATCH (start:{start_type} {{UUID: '{start_uuid}'}}) \
+        MATCH (stop:{stop_type}) \
         WITH \
             point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}) AS startPoint, \
-            point({{longitude: end.LONGITUDE, latitude: end.LATITUDE}}) AS endPoint, \
             point({{longitude: stop.LONGITUDE, latitude: stop.LATITUDE}}) AS stopPoint, \
             stop.LONGITUDE as stop_lon, stop.LATITUDE as stop_lat, \
-            start, end, stop \
+            start, stop \
         WHERE stop.LONGITUDE=stop_lon and stop.LATITUDE=stop_lat \
-            and round(point.distance(startPoint, stopPoint))<={ray_f} \
-            and round(point.distance(stopPoint, endPoint))<={ray_f} \
-        CREATE (stop_dup:Restaurant2) \
-        SET stop_dup += properties(stop) \
-        MERGE (start)-[rTO:TO_RESTAURANT]->(stop_dup) \
-        SET rTO.DISTANCE = round(point.distance(startPoint, stopPoint)) \
-        MERGE (stop_dup)-[rFROM:TO_NEXT_POI]->(end) \
-        SET rFROM.DISTANCE = round(point.distance(stopPoint, endPoint)); \
+            and round(point.distance(startPoint, stopPoint))<{ray} \
+        RETURN COUNT(stop) AS nb; \
     ")
-
-    queryDeleteRelationshipsFromPOIToPOI = (
-        f"MATCH p=(start:POI2 {{UUID:'{source.uuid}'}})-[r:TO_NEXT_POI]->(end:POI2 {{UUID:'{target.uuid}'}}) "
-        "DELETE r; "
-    )
-
-    queryCreateRelationshipFromRestaurantToHosting = (
-        f"MATCH (start:POI2 {{UUID:'{source.uuid}'}}) \
-        MATCH (end:POI2 {{UUID:'{target.uuid}'}}) \
-        MATCH (stopR:Restaurant2) \
-        MATCH p=(start)-[r:TO_RESTAURANT]->(stopR) \
-        MATCH (stopH:Hosting2) \
-        WITH \
-            point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}) AS startPoint, \
-            point({{longitude: end.LONGITUDE, latitude: end.LATITUDE}}) AS endPoint, \
-            point({{longitude: stopR.LONGITUDE, latitude: stopR.LATITUDE}}) AS stopRPoint, \
-            point({{longitude: stopH.LONGITUDE, latitude: stopH.LATITUDE}}) AS stopHPoint, \
-            stopH.LONGITUDE as stopH_lon, stopH.LATITUDE as stopH_lat, \
-            start, end, stopR, stopH \
-        WHERE stopH.LONGITUDE=stopH_lon and stopH.LATITUDE=stopH_lat \
-            and round(point.distance(stopRPoint, stopHPoint))<={ray_f} \
-            and round(point.distance(stopHPoint, endPoint))<={ray_f} \
-        CREATE (stopH_dup:Hosting2) \
-        SET stopH_dup += properties(stopH) \
-        MERGE (stopR)-[rTO:TO_HOSTING]->(stopH_dup) \
-        SET rTO.DISTANCE = round(point.distance(stopRPoint, stopHPoint)) \
-        MERGE (stopH_dup)-[rFROM:TO_NEXT_POI]->(end) \
-        SET rFROM.DISTANCE = round(point.distance(stopHPoint, endPoint)); \
-    ")
-
-    queryDeleteRelationshipsFromRestaurantToPOI = (
-        f"MATCH p1=(start:POI2 {{UUID:'{source.uuid}'}})-[r1:TO_RESTAURANT]->(stop:Restaurant2)-[r2:TO_NEXT_POI]->(end:POI2 {{UUID:'{target.uuid}'}}) "
-        "DELETE r2; "
-    )
-
     with driver.session() as session:
-        if stop_type == 'Restaurant':
-            session.run(queryCreateRelationshipFromPOIToRestaurant)
-            session.run(queryDeleteRelationshipsFromPOIToPOI)
-        elif stop_type == 'Hosting':
-            session.run(queryCreateRelationshipFromRestaurantToHosting)
-            session.run(queryDeleteRelationshipsFromRestaurantToPOI)
-
-
-def compute_relationships(first_poi: POI, selected_pois: list[POI]):
-
-    selected_pois_order = []
-    selected_pois_pop = selected_pois
-    day, rank = 1, 1
-    count_poi_per_day = {1: 1}
-
-    # First poi to visit
-    poi_start = first_poi
-    # remove it from the list of remaining POIs to visit
-    selected_pois_pop.remove(poi_start)
-    selected_pois_order.append(poi_start)   # append it with the right order
-
-    # First cluster to start
-    cluster_start = poi_start.cluster
-    poi_start.day, poi_start.rank = day, rank
-    remain_uuid_cluster, remain_uuid_other = find_uuids_by_cluster(
-        selected_pois_pop, cluster_start)
-
-    try:
-        # 1/ Loop on POIs first
-        # while there are POIs to visit
-        while (len(selected_pois_pop) > 0):
-
-            # verify that there are still pois to visit within the same cluster
-            if (len(remain_uuid_cluster) > 0):
-                rank += 1
-                next_poi_uuid, cluster_start = compute_next_nearest_poi(
-                    poi_start, remain_uuid_cluster)
-            else:
-                day += 1  # another day
-                rank = 1  # restart at 1
-                next_poi_uuid, cluster_start = compute_next_nearest_poi(
-                    poi_start, remain_uuid_other)
-
-            # return a POI according to its uuid
-            poi_start = find_node_by_uuid(selected_pois_pop, next_poi_uuid)
-            # remove it from the list of remaining POIs to visit
-            selected_pois_pop.remove(poi_start)
-            # append it with the right order
-            poi_start.day, poi_start.rank = day, rank
-            selected_pois_order.append(poi_start)
-
-            # update the 2 lists of remaning POIs to visit
-            remain_uuid_cluster, remain_uuid_other = find_uuids_by_cluster(
-                selected_pois_pop, cluster_start)
-
-            # count the number of POIs to visit within the day
-            try:
-                count_poi_per_day[day] += 1
-            except KeyError:
-                count_poi_per_day[day] = 1
-
-        # itinary (POIs only)
-        for pos, poi in enumerate(selected_pois_order):
-            print(pos, poi.day, poi.rank, poi.cluster, poi.name)
-
-    # 2/ loop on restaurants and hostings
-        for day_trip in range(1, day+1):
-            count_poi_day_trip = count_poi_per_day[day_trip]
-            poi_before_lunch, poi_after_lunch, poi_before_diner, poi_after_hosting = \
-                find_nodes_by_steps(selected_pois_order,
-                                    day_trip, count_poi_day_trip)
-
-            # plan a lunch
-            if poi_after_lunch != None:
-                compute_next_nearest_stop(
-                    poi_before_lunch, poi_after_lunch, 'Restaurant')
-                if day_trip < day:
-                    # plan a dinner (except the last day)
-                    compute_next_nearest_stop(
-                        poi_before_diner, poi_after_hosting, 'Restaurant')
-                    # plan a hosting, except for the last night of the trip (except the last day)
-                    compute_next_nearest_stop(
-                        poi_before_diner, poi_after_hosting, 'Hosting')
-            else:
-                if day_trip < day:
-                    # plan a dinner (except the last day)
-                    compute_next_nearest_stop(
-                        poi_before_lunch, poi_after_hosting, 'Restaurant')
-                    # plan a hosting, except for the last night of the trip (except the last day)
-                    compute_next_nearest_stop(
-                        poi_before_lunch, poi_after_hosting, 'Hosting')
-
-    except KeyError:
-        pass
-
-    return selected_pois_order
-
-
-# Algorithm : Dijkstra Source-Target Shortest Path
-def compute_shortest_path(selected_pois: list[POI]):
-
-    # project a graph and store it
-    myGraphName = 'myGraph'+str(round(time.time()))
-    queryGraphProject = (
-        f"CALL gds.graph.project( \
-            '{myGraphName}', \
-            ['POI2', 'Restaurant2', 'Hosting2'], \
-            ['TO_NEXT_POI', 'TO_RESTAURANT', 'TO_HOSTING'], \
-            {{relationshipProperties:'DISTANCE'}} \
-            ) \
-        ")
-
-    # estimate the memory it will take
-    first_POI, last_POI = selected_pois[0], selected_pois[len(selected_pois)-1]
-    queryMemoryEstimation = (
-        f"MATCH \
-            (source:POI2 {{UUID:'{first_POI.uuid}'}}), \
-            (target:POI2 {{UUID:'{last_POI.uuid}'}}) \
-        CALL gds.shortestPath.dijkstra.write.estimate('{myGraphName}', {{ \
-            sourceNode: source, \
-            targetNode: target, \
-            relationshipWeightProperty: 'DISTANCE', \
-            writeRelationshipType:'PATH' \
-        }}) \
-        YIELD nodeCount, relationshipCount, bytesMin, bytesMax, requiredMemory \
-        RETURN nodeCount, relationshipCount, bytesMin, bytesMax, requiredMemory; \
-        "
-    )
-
-    # stream the shortest path
-    queryStream = (
-        f"MATCH \
-            (source:POI2 {{UUID:'{first_POI.uuid}'}}), \
-            (target:POI2 {{UUID:'{last_POI.uuid}'}}) \
-        CALL gds.shortestPath.dijkstra.stream('{myGraphName}', {{ \
-            sourceNode: source, \
-            targetNode: target, \
-            relationshipWeightProperty: 'DISTANCE' \
-        }}) \
-        YIELD index, sourceNode, targetNode, totalCost, nodeIds, costs, path \
-        RETURN \
-            index, \
-            gds.util.asNode(sourceNode).UUID AS sourceNodeName, \
-            gds.util.asNode(targetNode).UUID AS targetNodeName, \
-            totalCost, \
-            [nodeId IN nodeIds | gds.util.asNode(nodeId).UUID] AS nodeNames, \
-            costs, \
-            nodes(path) as path \
-        ORDER BY totalCost ; \
-        "
-    )
-
-    """# mutate (update the graph with new relationships) : no need here ...
-    queryMutate = (
-        f"MATCH \
-            (source:POI2 {{UUID:'{first_POI.uuid}'}}), \
-            (target:POI2 {{UUID:'{last_POI.uuid}'}}) \
-        CALL gds.shortestPath.dijkstra.mutate('{myGraphName}', {{ \
-            sourceNode: source, \
-            targetNode: target, \
-            relationshipWeightProperty: 'DISTANCE', \
-            mutateRelationshipType: 'PATH' \
-        }}) \
-        YIELD relationshipsWritten \
-        RETURN relationshipsWritten; \
-        "
-    )"""
-
-    queryWrite = (
-        f"MATCH \
-            (source:POI2 {{UUID:'{first_POI.uuid}'}}), \
-            (target:POI2 {{UUID:'{last_POI.uuid}'}}) \
-        OPTIONAL MATCH (source)-[r:PATH]->(target) \
-        WHERE r is null \
-        CALL gds.shortestPath.dijkstra.write('{myGraphName}', {{ \
-            sourceNode: source, \
-            targetNode: target, \
-            relationshipWeightProperty: 'DISTANCE', \
-            writeRelationshipType: 'PATH', \
-            writeNodeIds: true, \
-            writeCosts: true \
-        }}) \
-        YIELD relationshipsWritten \
-        RETURN relationshipsWritten; \
-        "
-    )
-
-    # relationships to view the shortest itinary on neo4j navigator
-    queryTempRelationships = (
-        f"MATCH p=()-[r:PATH]->() \
-        WITH min(r.totalCost) as costMin \
-        MATCH pMin=()-[rMin:PATH]->() \
-            WHERE rMin.totalCost = costMin \
-        WITH rMin.nodeIds as nodeIds \
-        UNWIND range(0, size(nodeIds) - 2) AS index \
-        WITH nodeIds[index] AS idn, nodeIds[index+1] AS idm \
-        MATCH (nOld), (mOld) \
-            WHERE id(nOld)=idn AND id(mOld)=idm \
-        CREATE p=(nOld)-[rel:It_TO_NEXT]->(mOld) \
-        RETURN p; \
-        "
-    )
-
-    queryTempDeletePath = (f"MATCH p=()-[r:PATH]->() delete r;")
-
-    with driver.session() as session:
-        # algo
-        session.run(queryGraphProject)
-        session.run(queryMemoryEstimation)
-        session.run(queryStream)
-        session.run(queryWrite)
-
-        # view the itinary on neo4j interface
-        res = session.run(queryTempRelationships).data()
-
-        # delete temp PATH
-        session.run(queryTempDeletePath)
-
-    return res
+        res = session.run(queryfindNextStopNumber).data()
+    return res[0]['nb']
 
 
 # Function to be called in planner/planner.py
@@ -463,70 +275,152 @@ def compute_itinerary(first_poi: POI, selected_pois: list[POI], selected_restaur
                       selected_hostings: list[Hosting], selected_trails: list[Trail]):
 
     # Clear nodes and relationships
-    for relationship_type in ['TO_NEXT_POI', 'TO_RESTAURANT', 'TO_HOSTING', 'It_TO_NEXT']:
+    for relationship_type in ['TO_NEXT_POI', 'TO_NEXT_RESTAURANT', 'TO_NEXT_HOSTING', 'It_TO_NEXT']:
         clear_relationships(relationship_type)
     for node_type in ['POI2', 'Restaurant2', 'Hosting2', 'Trail2']:
         clear_nodes(node_type)
-
+    
     # Create new nodes in neo4j, temporarly (POI2, restaurant2, hosting2)
     create_nodes(selected_pois, selected_restaurants,
                  selected_hostings, selected_trails)
-
+    
     logger.info(
         f"number of nodes created = {len(selected_pois)}, {len(selected_restaurants)}, {len(selected_hostings)}, {len(selected_trails)}")
+    
+    # Number of POI per cluster
+    clusters={}
+    for poi in selected_pois: 
+        try:
+            clusters[poi.cluster] += 1
+        except KeyError:
+            clusters[poi.cluster] = 1
+    
+    logger.info(
+        f"number of POIS to visit per cluster = {clusters}")
+    
+    # Begin the research of next nearest point (POI, Restaurant or Hosting)
+    res_pois, res_restaurants, res_hostings, res_trails = [], [], [], []
+    day = 1
+    start_poi = first_poi
+    start_poi.day, start_poi.rank = day, 1
+    res_pois.append(start_poi)
+    start_poi_uuid = start_poi.uuid
+    start_poi_cluster = start_poi.cluster
+    
+    while len(clusters) > 0:
+        nb_pois_to_visit_in_day = clusters[start_poi_cluster]
+        match nb_pois_to_visit_in_day:
+            case 4:
+                next_poi_to_visit_uuid = find_next_poi_from_poi(start_poi_uuid)
+                poi =  find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
+                poi.day, poi.rank = day, 2
+                res_pois.append(poi)
 
-    # temp only  because restaurants and hostings lists are too far away from selected POIs to visit
-    # create_nodes(selected_pois, [], [], [])
-    # duplicate_nodes()
+                next_restaurant_uuid = find_next_restaurant_from_poi(next_poi_to_visit_uuid, "POI2")
+                restaurant =  find_node_by_uuid(selected_restaurants, next_restaurant_uuid)
+                restaurant.day, restaurant.rank = day, 3
+                res_restaurants.append(restaurant)
+                
+                next_poi_to_visit_uuid, cluster = find_next_poi_from_other(next_restaurant_uuid, 'Restaurant2', start_poi_cluster)
+                poi =  find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
+                poi.day, poi.rank = day, 4
+                res_pois.append(poi)
 
-    # Create new relationships
-    selected_pois_order = compute_relationships(first_poi, selected_pois)
+                next_poi_to_visit_uuid = find_next_poi_from_poi(next_poi_to_visit_uuid)
+                poi =  find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
+                poi.day, poi.rank = day, 5
+                res_pois.append(poi)
 
-    # Find the shortest path
-    path = compute_shortest_path(selected_pois_order)
+                next_restaurant_uuid = find_next_restaurant_from_poi(next_poi_to_visit_uuid, "POI2")
+                restaurant =  find_node_by_uuid(selected_restaurants, next_restaurant_uuid)
+                restaurant.day, restaurant.rank = day, 6
+                res_restaurants.append(restaurant)
 
-    # Return the 4 lists with order to show on dash
-    res_pois, res_restaurants, res_hostings, res_trails = [
-        selected_pois_order[0]], [], [], []
-    day, rank = 1, 1
+                next_hosting_uuid = find_next_hosting_from_restaurant(next_restaurant_uuid, "Restaurant2")
+                hosting =  find_node_by_uuid(selected_hostings, next_hosting_uuid)
+                hosting.day, hosting.rank = day, 7
+                res_hostings.append(hosting)
+            case 3:
+                next_poi_to_visit_uuid = find_next_poi_from_poi(start_poi_uuid)
+                poi =  find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
+                poi.day, poi.rank = day, 2
+                res_pois.append(poi)
+                
+                next_restaurant_uuid = find_next_restaurant_from_poi(next_poi_to_visit_uuid, "POI2")
+                restaurant =  find_node_by_uuid(selected_restaurants, next_restaurant_uuid)
+                restaurant.day, restaurant.rank = day, 3
+                res_restaurants.append(restaurant)
+                
+                next_poi_to_visit_uuid, cluster = find_next_poi_from_other(next_restaurant_uuid, 'Restaurant2',start_poi_cluster)
+                poi =  find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
+                poi.day, poi.rank = day, 4
+                res_pois.append(poi)
 
-    for relation in path:
-        match relation['p'][2]['TYPE']:
-            case 'POI':
-                if relation['p'][0]['TYPE'] == 'Hosting':
-                    day += 1
-                    rank = 1
-                    res = find_node_by_uuid(
-                        selected_pois_order, relation['p'][2]['UUID'])
-                    res.day, res.rank = day, rank
-                    res_pois.append(res)
-                else:
-                    rank += 1
-                    res = find_node_by_uuid(
-                        selected_pois_order, relation['p'][2]['UUID'])
-                    res.day, res.rank = day, rank
-                    res_pois.append(res)
-            case 'Restaurant':
-                rank += 1
-                res = find_node_by_uuid(
-                    selected_restaurants, relation['p'][2]['UUID'])
-                res.day, res.rank = day, rank
-                res_restaurants.append(res)
-            case 'Hosting':
-                rank += 1
-                res = find_node_by_uuid(
-                    selected_hostings, relation['p'][2]['UUID'])
-                res.day, res.rank = day, rank
-                res_hostings.append(res)
+                next_restaurant_uuid = find_next_restaurant_from_poi(next_poi_to_visit_uuid, "POI2")
+                restaurant =  find_node_by_uuid(selected_restaurants, next_restaurant_uuid)
+                restaurant.day, restaurant.rank = day, 5
+                res_restaurants.append(restaurant)
+                
+                next_hosting_uuid = find_next_hosting_from_restaurant(next_restaurant_uuid, "Restaurant2")
+                hosting =  find_node_by_uuid(selected_hostings, next_hosting_uuid)
+                hosting.day, hosting.rank = day, 6
+                res_hostings.append(hosting)
+            case 2:
+                next_restaurant_uuid = find_next_restaurant_from_poi(start_poi_uuid, "POI2")
+                restaurant =  find_node_by_uuid(selected_restaurants, next_restaurant_uuid)
+                restaurant.day, restaurant.rank = day, 2
+                res_restaurants.append(restaurant)
+                
+                next_poi_to_visit_uuid, cluster = find_next_poi_from_other(next_restaurant_uuid, 'Restaurant2',start_poi_cluster)
+                poi =  find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
+                poi.day, poi.rank = day, 3
+                res_pois.append(poi)
 
+                next_restaurant_uuid = find_next_restaurant_from_poi(next_poi_to_visit_uuid, "POI2")
+                restaurant =  find_node_by_uuid(selected_restaurants, next_restaurant_uuid)
+                restaurant.day, restaurant.rank = day, 4
+                res_restaurants.append(restaurant)
+                
+                next_hosting_uuid = find_next_hosting_from_restaurant(next_restaurant_uuid, "Restaurant2")
+                hosting =  find_node_by_uuid(selected_hostings, next_hosting_uuid)
+                hosting.day, hosting.rank = day, 5
+                res_hostings.append(hosting)
+            case 1:
+                next_restaurant_uuid = find_next_restaurant_from_poi(start_poi_uuid, "POI2")
+                restaurant =  find_node_by_uuid(selected_restaurants, next_restaurant_uuid)
+                restaurant.day, restaurant.rank = day, 2
+                res_restaurants.append(restaurant)
+                
+                next_hosting_uuid = find_next_hosting_from_restaurant(next_restaurant_uuid, "Restaurant2")
+                hosting =  find_node_by_uuid(selected_hostings, next_hosting_uuid)
+                hosting.day, hosting.rank = day, 3
+                res_hostings.append(hosting)
+        
+        # delete the cluster
+        del clusters[start_poi_cluster]
+        logger.info(
+        f"Calculation done for day {day}")
+        
+        # find next POI to visit on day +1
+        if len(clusters) > 0: 
+            day += 1
+            
+            start_poi_uuid, start_poi_cluster = find_next_poi_from_other(next_hosting_uuid, 'Hosting2')
+            poi =  find_node_by_uuid(selected_pois, start_poi_uuid)
+            poi.day, poi.rank = day, 1
+            res_pois.append(poi)
+            
     # on veut une seule liste avec tous les points
     # return res_pois, res_restaurants, res_hostings, res_trails
+    # logger.info(
+    #     f"Ouput of neo4j = {res_pois + res_restaurants + res_hostings + res_trails}")
+    
     return res_pois + res_restaurants + res_hostings + res_trails
 
 
 if __name__ == '__main__':
 
-    for relationship_type in ['TO_NEXT_POI', 'TO_RESTAURANT', 'TO_HOSTING', 'It_TO_NEXT']:
+    for relationship_type in ['TO_NEXT_POI', 'TO_NEXT_RESTAURANT', 'TO_NEXT_HOSTING', 'It_TO_NEXT']:
         clear_relationships(relationship_type)
     for node_type in ['POI2', 'Restaurant2', 'Hosting2']:
         clear_nodes(node_type)
@@ -542,9 +436,6 @@ if __name__ == '__main__':
                  selected_hostings, selected_trails)
     duplicate_nodes()
 
-    selected_pois_order = compute_relationships(first_poi, selected_pois)
-
-    chemin = compute_shortest_path(selected_pois_order)
-
-    for relation in chemin:
-        print(relation)
+    selected_restaurants, selected_hostings, selected_trails = [], [], []
+    first_poi = selected_pois[0]
+    compute_itinerary(first_poi, selected_pois, selected_restaurants, selected_hostings, selected_trails)

@@ -76,7 +76,7 @@ def get_poi_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     logger.info(f"number of POIs find = {len(poi_list)}")
     if poi_list != []:
         res_list = [db_raw_to_poi(x) for x in poi_list]
-        logger.info(f"identified POI: {res_list}")
+        # logger.info(f"identified POI: {res_list}")
         return res_list
     else:
         return None
@@ -112,7 +112,7 @@ def get_restaurants_by_zone(zone: int, rayon: int, days: int = 1) -> list:
 
     restaurant_list = [db_raw_to_restaurant(x) for x in restaurant_list]
     # logger.info(f"identified restaurants: {json.dumps(restaurant_list, indent=4)}")
-    logger.info(f"identified restaurants: {restaurant_list}")
+    # logger.info(f"identified restaurants: {restaurant_list}")
     return restaurant_list
 
 
@@ -143,7 +143,7 @@ def get_hosting_by_zone(zone: int, rayon: int, days: int = 1) -> list:
 
     hosting_list = [db_raw_to_hosting(x) for x in hosting_list]
     # logger.info(f"identified hostings: {json.dumps(hosting_list, indent=4)}")
-    logger.info(f"identified hostings: {hosting_list}")
+    # logger.info(f"identified hostings: {hosting_list}")
     return hosting_list
 
 
@@ -174,7 +174,7 @@ def get_trails_by_zone(zone: int, rayon: int, days: int = 1) -> list:
 
     trail_list = [db_raw_to_trail(x) for x in trail_list]
     # logger.info(f"identified trails: {json.dumps(trail_list, indent=4)}")
-    logger.info(f"identified trails: {trail_list}")
+    # logger.info(f"identified trails: {trail_list}")
     return trail_list
 
 
@@ -205,7 +205,7 @@ def get_wc_by_zone(zone: int, rayon: int, days: int = 1) -> list:
 
     wc_list = [db_raw_to_wc(x) for x in wc_list]
     # logger.info(f"identified WCs: {json.dumps(wc_list, indent=4)}")
-    logger.info(f"identified WCs: {wc_list}")
+    # logger.info(f"identified WCs: {wc_list}")
     return wc_list
 
 
