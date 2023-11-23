@@ -29,10 +29,10 @@ logger = logging.getLogger(__name__)
 
 
 app = FastAPI(debug=DEBUG)
-# app.mount("/static",
-#           StaticFiles(directory=str(
-#               Path(Path(__file__).resolve().parent, 'static'))
-#           ))
+app.mount("/static",
+          StaticFiles(directory=str(
+              Path(Path(__file__).resolve().parent, 'static'))
+          ))
 
 templates = Jinja2Templates(
     directory=str(
