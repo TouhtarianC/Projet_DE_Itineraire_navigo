@@ -1,27 +1,30 @@
 from dataclasses import asdict
 from neo4j import GraphDatabase, basic_auth
-from navigo.planner.models import GeospatialPoint, POI, Hosting, Restaurant, Trail
+from navigo.planner.models import POI, Hosting, Restaurant, Trail
 from navigo.settings import NEO4J_URI, NEO4J_USER, NEO4J_PWD
-import time
 import logging
 import copy
 
 
-driver = GraphDatabase.driver(
-    NEO4J_URI, auth=basic_auth(NEO4J_USER, NEO4J_PWD))
 logger = logging.getLogger(__name__)
 
 
 def clear_nodes(node_type):
     query = (f"MATCH (n:{node_type}) DETACH DELETE n;")
-    with driver.session() as session:
-        session.run(query)
+    with GraphDatabase.driver(NEO4J_URI,
+                              auth=basic_auth(NEO4J_USER, NEO4J_PWD)
+                              ) as driver:
+        with driver.session() as session:
+            session.run(query)
 
 
 def clear_relationships(relationship_type):
     query = (f"MATCH ()-[r:{relationship_type}]->() DETACH DELETE r;")
-    with driver.session() as session:
-        session.run(query)
+    with GraphDatabase.driver(NEO4J_URI,
+                              auth=basic_auth(NEO4J_USER, NEO4J_PWD)
+                              ) as driver:
+        with driver.session() as session:
+            session.run(query)
 
 
 # for testing purpose (eg using __main__)
@@ -36,31 +39,39 @@ def duplicate_nodes():
             SET c.SCORE = 0 \
             SET c.TYPE = '{type.upper()}'; \
             ")
-        with driver.session() as session:
-            session.run(queryDuplicate)
+        with GraphDatabase.driver(NEO4J_URI,
+                                  auth=basic_auth(NEO4J_USER, NEO4J_PWD)
+                                  ) as driver:
+            with driver.session() as session:
+                session.run(queryDuplicate)
+
 
 # Create nodes for POIs, Restaurants, Hostings, and Trails
 def create_nodes(poi_list, restaurant_list, hosting_list, trail_list):
-
-    with driver.session() as session:
-        for node in poi_list + restaurant_list + hosting_list + trail_list:
-            # copy of new nodes and labels in upper to be consistent with neo4j db
-            node_type = node.type+'2'
-            params_node = {key.upper(): asdict(
-                node)[key] for key in asdict(node).keys()}
-            query = (
-                f"CREATE (p:{node_type} $params)\
-                SET p.LATITUDE = toFloat(p.LATITUDE) \
-                SET p.LONGITUDE = toFloat(p.LONGITUDE) \
-                ;"
-            )
-            session.run(query, params=params_node)
+    with GraphDatabase.driver(NEO4J_URI,
+                              auth=basic_auth(NEO4J_USER, NEO4J_PWD)
+                              ) as driver:
+        with driver.session() as session:
+            for node in poi_list + restaurant_list + hosting_list + trail_list:
+                # copy of new nodes and labels in upper to be consistent with neo4j db
+                node_type = node.type+'2'
+                params_node = {key.upper(): asdict(
+                    node)[key] for key in asdict(node).keys()}
+                query = (
+                    f"CREATE (p:{node_type} $params)\
+                    SET p.LATITUDE = toFloat(p.LATITUDE) \
+                    SET p.LONGITUDE = toFloat(p.LONGITUDE) \
+                    ;"
+                )
+                session.run(query, params=params_node)
 
 # Identify a POI among a list with its uuid, return a POI
+
+
 def find_node_by_uuid(poi_list, uuid):
     res = next((poi for poi in poi_list if poi.uuid == uuid), None)
 
-    if res != None:
+    if res is not None:
         return copy.copy(res)
     else:
         return None
@@ -68,7 +79,7 @@ def find_node_by_uuid(poi_list, uuid):
 
 # Find next POI to visit after a previous POI
 def find_next_poi_from_poi(start_uuid):
-    
+
     queryCreateToNextPOI = (
         f"MATCH (start:POI2 {{UUID:'{start_uuid}'}}) \
         MATCH (m:POI2) WHERE m.UUID <> start.UUID \
@@ -96,18 +107,21 @@ def find_next_poi_from_poi(start_uuid):
                 )) \
         RETURN end; \
     ")
-    
-    with driver.session() as session:
-        res = session.run(queryCreateToNextPOI).data()
+    with GraphDatabase.driver(NEO4J_URI,
+                              auth=basic_auth(NEO4J_USER, NEO4J_PWD)
+                              ) as driver:
+        with driver.session() as session:
+            res = session.run(queryCreateToNextPOI).data()
     res = res[0]['end']
     return res['UUID']
 
 
 # Find next POI to visit after a restaurant or a hosting
 def find_next_poi_from_other(start_uuid, start_type, cluster=None):
-    
-    # when we have to find a POI after a restaurant, we have to memorize in which cluster the last POI was
-    if cluster != None: 
+
+    # when we have to find a POI after a restaurant, 
+    # we have to memorize in which cluster the last POI was
+    if cluster is not None:
         queryCreateToNextPOI = (
             f"MATCH (start:{start_type} {{UUID:'{start_uuid}'}}) \
             MATCH (m:POI2) WHERE m.UUID <> start.UUID \
@@ -134,7 +148,8 @@ def find_next_poi_from_other(start_uuid, start_type, cluster=None):
                     )) \
             RETURN end; \
         ")
-    # when we have to find a POI after a hosting, there's no need to know the cluster as it will e a new one (eg a day after)
+    # when we have to find a POI after a hosting,
+    # there's no need to know the cluster as it will be a new one (eg a day after)
     else:
         queryCreateToNextPOI = (
             f"MATCH (start:{start_type} {{UUID:'{start_uuid}'}}) \
@@ -161,21 +176,25 @@ def find_next_poi_from_other(start_uuid, start_type, cluster=None):
                     )) \
             RETURN end; \
         ")
-    with driver.session() as session:
-        res = session.run(queryCreateToNextPOI).data()
+    with GraphDatabase.driver(NEO4J_URI,
+                              auth=basic_auth(NEO4J_USER, NEO4J_PWD)
+                              ) as driver:
+        with driver.session() as session:
+            res = session.run(queryCreateToNextPOI).data()
     res = res[0]['end']
     return res['UUID'], res['CLUSTER']
 
 
 # Find next restaurant to have lunch or dinner after POI
 def find_next_restaurant_from_poi(start_uuid, start_type):
-    
+
     ray_f = 200
     n = find_stop_around_number(start_uuid, start_type, "Restaurant2", ray_f)
-    
+
     while (ray_f < 20000 and n < 3):
         ray_f += 100
-        n = find_stop_around_number(start_uuid, start_type, "Restaurant2", ray_f)
+        n = find_stop_around_number(
+            start_uuid, start_type, "Restaurant2", ray_f)
     queryCreateToNextRestaurant = (
         f"MATCH (start:{start_type} {{UUID:'{start_uuid}'}}) \
         MATCH (m:Restaurant2) \
@@ -201,19 +220,21 @@ def find_next_restaurant_from_poi(start_uuid, start_type):
                 )) \
         RETURN end; \
     ")
-    
-    with driver.session() as session:
-        res = session.run(queryCreateToNextRestaurant).data()
+    with GraphDatabase.driver(NEO4J_URI,
+                              auth=basic_auth(NEO4J_USER, NEO4J_PWD)
+                              ) as driver:
+        with driver.session() as session:
+            res = session.run(queryCreateToNextRestaurant).data()
     res = res[0]['end']
     return res['UUID']
 
 
 # Find next hosting to stay after a restaurant
 def find_next_hosting_from_restaurant(start_uuid, start_type):
-    
+
     ray_f = 200
     n = find_stop_around_number(start_uuid, start_type, "Hosting2", ray_f)
-    
+
     while (ray_f < 20000 and n < 3):
         ray_f += 100
         n = find_stop_around_number(start_uuid, start_type, "Hosting2", ray_f)
@@ -242,9 +263,11 @@ def find_next_hosting_from_restaurant(start_uuid, start_type):
                 )) \
         RETURN end; \
     ")
-    
-    with driver.session() as session:
-        res = session.run(queryCreateToNextHosting).data()
+    with GraphDatabase.driver(NEO4J_URI,
+                              auth=basic_auth(NEO4J_USER, NEO4J_PWD)
+                              ) as driver:
+        with driver.session() as session:
+            res = session.run(queryCreateToNextHosting).data()
     res = res[0]['end']
     return res['UUID']
 
@@ -252,7 +275,7 @@ def find_next_hosting_from_restaurant(start_uuid, start_type):
 # Find the number of potential restaurants or hosting in a defined ray
 # They will be later filtered by the best score within this ray
 def find_stop_around_number(start_uuid, start_type, stop_type, ray):
-    
+
     queryfindNextStopNumber = (
         f"MATCH (start:{start_type} {{UUID: '{start_uuid}'}}) \
         MATCH (stop:{stop_type}) \
@@ -265,39 +288,48 @@ def find_stop_around_number(start_uuid, start_type, stop_type, ray):
             and round(point.distance(startPoint, stopPoint))<{ray} \
         RETURN COUNT(stop) AS nb; \
     ")
-    with driver.session() as session:
-        res = session.run(queryfindNextStopNumber).data()
+    with GraphDatabase.driver(NEO4J_URI,
+                              auth=basic_auth(NEO4J_USER, NEO4J_PWD)
+                              ) as driver:
+        with driver.session() as session:
+            res = session.run(queryfindNextStopNumber).data()
     return res[0]['nb']
 
 
 # Function to be called in planner/planner.py
-def compute_itinerary(first_poi: POI, selected_pois: list[POI], selected_restaurants: list[Restaurant],
-                      selected_hostings: list[Hosting], selected_trails: list[Trail]):
+def compute_itinerary(first_poi: POI,
+                      selected_pois: list[POI],
+                      selected_restaurants: list[Restaurant],
+                      selected_hostings: list[Hosting],
+                      selected_trails: list[Trail]):
 
     # Clear nodes and relationships
-    for relationship_type in ['TO_NEXT_POI', 'TO_NEXT_RESTAURANT', 'TO_NEXT_HOSTING', 'It_TO_NEXT']:
+    for relationship_type in ['TO_NEXT_POI', 'TO_NEXT_RESTAURANT',
+                              'TO_NEXT_HOSTING', 'It_TO_NEXT']:
         clear_relationships(relationship_type)
     for node_type in ['POI2', 'Restaurant2', 'Hosting2', 'Trail2']:
         clear_nodes(node_type)
-    
+
     # Create new nodes in neo4j, temporarly (POI2, restaurant2, hosting2)
     create_nodes(selected_pois, selected_restaurants,
                  selected_hostings, selected_trails)
-    
+
     logger.info(
-        f"number of nodes created = {len(selected_pois)}, {len(selected_restaurants)}, {len(selected_hostings)}, {len(selected_trails)}")
-    
+        f"number of nodes created = {len(selected_pois)}, \
+            {len(selected_restaurants)}, {len(selected_hostings)}, \
+                {len(selected_trails)}")
+
     # Number of POI per cluster
-    clusters={}
-    for poi in selected_pois: 
+    clusters = {}
+    for poi in selected_pois:
         try:
             clusters[poi.cluster] += 1
         except KeyError:
             clusters[poi.cluster] = 1
-    
+
     logger.info(
         f"number of POIS to visit per cluster = {clusters}")
-    
+
     # Begin the research of next nearest point (POI, Restaurant or Hosting)
     res_pois, res_restaurants, res_hostings, res_trails = [], [], [], []
     day = 1
@@ -306,115 +338,137 @@ def compute_itinerary(first_poi: POI, selected_pois: list[POI], selected_restaur
     res_pois.append(start_poi)
     start_poi_uuid = start_poi.uuid
     start_poi_cluster = start_poi.cluster
-    
+
     while len(clusters) > 0:
         nb_pois_to_visit_in_day = clusters[start_poi_cluster]
         match nb_pois_to_visit_in_day:
             case 4:
                 next_poi_to_visit_uuid = find_next_poi_from_poi(start_poi_uuid)
-                poi =  find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
+                poi = find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
                 poi.day, poi.rank = day, 2
                 res_pois.append(poi)
 
-                next_restaurant_uuid = find_next_restaurant_from_poi(next_poi_to_visit_uuid, "POI2")
-                restaurant =  find_node_by_uuid(selected_restaurants, next_restaurant_uuid)
+                next_restaurant_uuid = find_next_restaurant_from_poi(
+                    next_poi_to_visit_uuid, "POI2")
+                restaurant = find_node_by_uuid(
+                    selected_restaurants, next_restaurant_uuid)
                 restaurant.day, restaurant.rank = day, 3
                 res_restaurants.append(restaurant)
-                
-                next_poi_to_visit_uuid, cluster = find_next_poi_from_other(next_restaurant_uuid, 'Restaurant2', start_poi_cluster)
-                poi =  find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
+
+                next_poi_to_visit_uuid, cluster = find_next_poi_from_other(
+                    next_restaurant_uuid, 'Restaurant2', start_poi_cluster)
+                poi = find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
                 poi.day, poi.rank = day, 4
                 res_pois.append(poi)
 
-                next_poi_to_visit_uuid = find_next_poi_from_poi(next_poi_to_visit_uuid)
-                poi =  find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
+                next_poi_to_visit_uuid = find_next_poi_from_poi(
+                    next_poi_to_visit_uuid)
+                poi = find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
                 poi.day, poi.rank = day, 5
                 res_pois.append(poi)
 
-                next_restaurant_uuid = find_next_restaurant_from_poi(next_poi_to_visit_uuid, "POI2")
-                restaurant =  find_node_by_uuid(selected_restaurants, next_restaurant_uuid)
+                next_restaurant_uuid = find_next_restaurant_from_poi(
+                    next_poi_to_visit_uuid, "POI2")
+                restaurant = find_node_by_uuid(
+                    selected_restaurants, next_restaurant_uuid)
                 restaurant.day, restaurant.rank = day, 6
                 res_restaurants.append(restaurant)
 
-                next_hosting_uuid = find_next_hosting_from_restaurant(next_restaurant_uuid, "Restaurant2")
-                hosting =  find_node_by_uuid(selected_hostings, next_hosting_uuid)
+                next_hosting_uuid = find_next_hosting_from_restaurant(
+                    next_restaurant_uuid, "Restaurant2")
+                hosting = find_node_by_uuid(
+                    selected_hostings, next_hosting_uuid)
                 hosting.day, hosting.rank = day, 7
                 res_hostings.append(hosting)
             case 3:
                 next_poi_to_visit_uuid = find_next_poi_from_poi(start_poi_uuid)
-                poi =  find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
+                poi = find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
                 poi.day, poi.rank = day, 2
                 res_pois.append(poi)
-                
-                next_restaurant_uuid = find_next_restaurant_from_poi(next_poi_to_visit_uuid, "POI2")
-                restaurant =  find_node_by_uuid(selected_restaurants, next_restaurant_uuid)
+
+                next_restaurant_uuid = find_next_restaurant_from_poi(
+                    next_poi_to_visit_uuid, "POI2")
+                restaurant = find_node_by_uuid(
+                    selected_restaurants, next_restaurant_uuid)
                 restaurant.day, restaurant.rank = day, 3
                 res_restaurants.append(restaurant)
-                
-                next_poi_to_visit_uuid, cluster = find_next_poi_from_other(next_restaurant_uuid, 'Restaurant2',start_poi_cluster)
-                poi =  find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
+
+                next_poi_to_visit_uuid, cluster = find_next_poi_from_other(
+                    next_restaurant_uuid, 'Restaurant2', start_poi_cluster)
+                poi = find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
                 poi.day, poi.rank = day, 4
                 res_pois.append(poi)
 
-                next_restaurant_uuid = find_next_restaurant_from_poi(next_poi_to_visit_uuid, "POI2")
-                restaurant =  find_node_by_uuid(selected_restaurants, next_restaurant_uuid)
+                next_restaurant_uuid = find_next_restaurant_from_poi(
+                    next_poi_to_visit_uuid, "POI2")
+                restaurant = find_node_by_uuid(
+                    selected_restaurants, next_restaurant_uuid)
                 restaurant.day, restaurant.rank = day, 5
                 res_restaurants.append(restaurant)
-                
-                next_hosting_uuid = find_next_hosting_from_restaurant(next_restaurant_uuid, "Restaurant2")
-                hosting =  find_node_by_uuid(selected_hostings, next_hosting_uuid)
+
+                next_hosting_uuid = find_next_hosting_from_restaurant(
+                    next_restaurant_uuid, "Restaurant2")
+                hosting = find_node_by_uuid(
+                    selected_hostings, next_hosting_uuid)
                 hosting.day, hosting.rank = day, 6
                 res_hostings.append(hosting)
             case 2:
-                next_restaurant_uuid = find_next_restaurant_from_poi(start_poi_uuid, "POI2")
-                restaurant =  find_node_by_uuid(selected_restaurants, next_restaurant_uuid)
+                next_restaurant_uuid = find_next_restaurant_from_poi(
+                    start_poi_uuid, "POI2")
+                restaurant = find_node_by_uuid(
+                    selected_restaurants, next_restaurant_uuid)
                 restaurant.day, restaurant.rank = day, 2
                 res_restaurants.append(restaurant)
-                
-                next_poi_to_visit_uuid, cluster = find_next_poi_from_other(next_restaurant_uuid, 'Restaurant2',start_poi_cluster)
-                poi =  find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
+
+                next_poi_to_visit_uuid, cluster = find_next_poi_from_other(
+                    next_restaurant_uuid, 'Restaurant2', start_poi_cluster)
+                poi = find_node_by_uuid(selected_pois, next_poi_to_visit_uuid)
                 poi.day, poi.rank = day, 3
                 res_pois.append(poi)
 
-                next_restaurant_uuid = find_next_restaurant_from_poi(next_poi_to_visit_uuid, "POI2")
-                restaurant =  find_node_by_uuid(selected_restaurants, next_restaurant_uuid)
+                next_restaurant_uuid = find_next_restaurant_from_poi(
+                    next_poi_to_visit_uuid, "POI2")
+                restaurant = find_node_by_uuid(
+                    selected_restaurants, next_restaurant_uuid)
                 restaurant.day, restaurant.rank = day, 4
                 res_restaurants.append(restaurant)
-                
-                next_hosting_uuid = find_next_hosting_from_restaurant(next_restaurant_uuid, "Restaurant2")
-                hosting =  find_node_by_uuid(selected_hostings, next_hosting_uuid)
+
+                next_hosting_uuid = find_next_hosting_from_restaurant(
+                    next_restaurant_uuid, "Restaurant2")
+                hosting = find_node_by_uuid(
+                    selected_hostings, next_hosting_uuid)
                 hosting.day, hosting.rank = day, 5
                 res_hostings.append(hosting)
             case 1:
-                next_restaurant_uuid = find_next_restaurant_from_poi(start_poi_uuid, "POI2")
-                restaurant =  find_node_by_uuid(selected_restaurants, next_restaurant_uuid)
+                next_restaurant_uuid = find_next_restaurant_from_poi(
+                    start_poi_uuid, "POI2")
+                restaurant = find_node_by_uuid(
+                    selected_restaurants, next_restaurant_uuid)
                 restaurant.day, restaurant.rank = day, 2
                 res_restaurants.append(restaurant)
-                
-                next_hosting_uuid = find_next_hosting_from_restaurant(next_restaurant_uuid, "Restaurant2")
-                hosting =  find_node_by_uuid(selected_hostings, next_hosting_uuid)
+
+                next_hosting_uuid = find_next_hosting_from_restaurant(
+                    next_restaurant_uuid, "Restaurant2")
+                hosting = find_node_by_uuid(
+                    selected_hostings, next_hosting_uuid)
                 hosting.day, hosting.rank = day, 3
                 res_hostings.append(hosting)
-        
+
         # delete the cluster
         del clusters[start_poi_cluster]
         logger.info(
-        f"Calculation done for day {day}")
-        
+            f"Calculation done for day {day}")
+
         # find next POI to visit on day +1
-        if len(clusters) > 0: 
+        if len(clusters) > 0:
             day += 1
-            
-            start_poi_uuid, start_poi_cluster = find_next_poi_from_other(next_hosting_uuid, 'Hosting2')
-            poi =  find_node_by_uuid(selected_pois, start_poi_uuid)
+
+            start_poi_uuid, start_poi_cluster = find_next_poi_from_other(
+                next_hosting_uuid, 'Hosting2')
+            poi = find_node_by_uuid(selected_pois, start_poi_uuid)
             poi.day, poi.rank = day, 1
             res_pois.append(poi)
-            
-    # on veut une seule liste avec tous les points
-    # return res_pois, res_restaurants, res_hostings, res_trails
-    # logger.info(
-    #     f"Ouput of neo4j = {res_pois + res_restaurants + res_hostings + res_trails}")
-    
+
     return res_pois + res_restaurants + res_hostings + res_trails
 
 
@@ -438,4 +492,5 @@ if __name__ == '__main__':
 
     selected_restaurants, selected_hostings, selected_trails = [], [], []
     first_poi = selected_pois[0]
-    compute_itinerary(first_poi, selected_pois, selected_restaurants, selected_hostings, selected_trails)
+    compute_itinerary(first_poi, selected_pois,
+                      selected_restaurants, selected_hostings, selected_trails)

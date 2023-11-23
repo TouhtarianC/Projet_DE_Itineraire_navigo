@@ -10,13 +10,14 @@ from fastapi import FastAPI, HTTPException, Request, Query, Depends
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.wsgi import WSGIMiddleware
+from a2wsgi import WSGIMiddleware
 from pydantic import BaseModel
 
 from navigo.app.paginate import PageParams, PagedResponseSchema, paginate
 
-from navigo.db import get_restaurants_by_zone, get_poi_by_zone, get_hosting_by_zone, get_trails_by_zone, \
-    get_wc_by_zone, get_poi_types, get_poi_themes, get_restaurants_types, get_hostings_types
+from navigo.db import get_restaurants_by_zone, get_poi_by_zone, \
+    get_hosting_by_zone, get_trails_by_zone, get_wc_by_zone, get_poi_types, \
+    get_poi_themes, get_restaurants_types, get_hostings_types
 from navigo.external import get_zipcode
 from navigo.map import create_dash_app
 from navigo.planner.models import UserData
@@ -132,7 +133,6 @@ async def get_favicon():
     return FileResponse("navigo/app/static/img/favicon.ico", 200)
 
 
-
 @app.get("/data/pois", response_model=PagedResponseSchema[POI])
 async def get_pois(
     zip_code: Annotated[str, 'zip code'],
@@ -149,8 +149,10 @@ async def get_pois(
 
     res = get_poi_by_zone(_zip_code, _rayon)
     if res is None:
-        logger.warning(f"no POI found for zone {_zip_code} with rayon {_rayon}")
-        raise HTTPException(status_code=404, detail="no POI found for this zone")
+        logger.warning(f"no POI found for zone {_zip_code} \
+                       with rayon {_rayon}")
+        raise HTTPException(status_code=404, detail="no POI found \
+                            for this zone")
     try:
         res = [dataclasses.asdict(r) for r in res]
     except TypeError as e:

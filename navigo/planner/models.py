@@ -58,13 +58,13 @@ def db_raw_to_poi(db_raw: dict) -> POI:
     document = collection.find_one({'UUID': db_raw.UUID})
     if document:
         # connect to neo4j
-        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD))
-        with driver.session() as session:
-            query = (
-                f"MATCH (n) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
-            )
-            result = session.run(query).data()
-            # print(f"neo4j result for poi.id ({db_raw.id}) = {result}")
+        with GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD)) as driver:
+            with driver.session() as session:
+                query = (
+                    f"MATCH (n) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
+                )
+                result = session.run(query).data()
+                # print(f"neo4j result for poi.id ({db_raw.id}) = {result}")
         if result:
             return POI(
                     name=document['LABEL']['fr'],
@@ -82,12 +82,12 @@ class Restaurant(GeospatialPoint):
 
 
 def db_raw_to_restaurant(db_raw: dict) -> Restaurant:
-    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD))
-    with driver.session() as session:
-        query = (
-            f"MATCH (n:restaurant) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
-        )
-        result = session.run(query).data()
+    with GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD)) as driver:
+        with driver.session() as session:
+            query = (
+                f"MATCH (n:restaurant) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
+            )
+            result = session.run(query).data()
     if result:
         # print(f"neo4j result for rest ({db_raw.UUID}) = {result}")
         return Restaurant(
@@ -97,7 +97,7 @@ def db_raw_to_restaurant(db_raw: dict) -> Restaurant:
             name=db_raw['NAME'],
             city=db_raw['CITY'],
             city_code=db_raw['POSTAL_CODE'],
-        )
+            )
 
 
 @dataclass
@@ -106,12 +106,12 @@ class Hosting(GeospatialPoint):
 
 
 def db_raw_to_hosting(db_raw: dict) -> Hosting:
-    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD))
-    with driver.session() as session:
-        query = (
-            f"MATCH (n:hosting) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
-        )
-        result = session.run(query).data()
+    with GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD)) as driver:
+        with driver.session() as session:
+            query = (
+                f"MATCH (n:hosting) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
+            )
+            result = session.run(query).data()
     if result:
         # print(f"neo4j result for hosting ({db_raw.UUID}) = {result}")
         return Hosting(
@@ -137,13 +137,13 @@ def db_raw_to_trail(db_raw: dict) -> Trail:
     document = collection.find_one({'UUID': db_raw.UUID})
     if document:
         # connect to neo4j
-        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD))
-        with driver.session() as session:
-            query = (
-                f"MATCH (n) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
-            )
-            result = session.run(query).data()
-            # print(f"neo4j result for poi.id ({db_raw.id}) = {result}")
+        with GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD)) as driver:
+            with driver.session() as session:
+                query = (
+                    f"MATCH (n) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
+                )
+                result = session.run(query).data()
+                # print(f"neo4j result for poi.id ({db_raw.id}) = {result}")
         if result:
             return Trail(
                     name=document['LABEL']['fr'],
@@ -162,12 +162,12 @@ class WC(GeospatialPoint):
 
 
 def db_raw_to_wc(db_raw: dict) -> WC:
-    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD))
-    with driver.session() as session:
-        query = (
-            f"MATCH (n:wc) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
-        )
-        result = session.run(query).data()
+    with GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD)) as driver:
+        with driver.session() as session:
+            query = (
+                f"MATCH (n:wc) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
+            )
+            result = session.run(query).data()
     if result:
         #print(f"neo4j result for wc ({db_raw.UUID}) = {result}")
         return WC(

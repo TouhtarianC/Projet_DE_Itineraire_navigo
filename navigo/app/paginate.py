@@ -1,6 +1,5 @@
 from typing import Generic, List, TypeVar
 from pydantic import BaseModel, conint
-from pydantic.generics import GenericModel
 from fastapi import HTTPException
 
 
@@ -13,7 +12,7 @@ class PageParams(BaseModel):
 T = TypeVar("T")
 
 
-class PagedResponseSchema(GenericModel, Generic[T]):
+class PagedResponseSchema(BaseModel, Generic[T]):
     """Response schema for any paged API."""
 
     total: int
