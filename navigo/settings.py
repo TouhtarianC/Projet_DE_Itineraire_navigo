@@ -1,5 +1,7 @@
 from decouple import config
 
+DEBUG = config('DEBUG', default=True, cast=bool)
+
 # neo4j settings
 # NEO4J_URI = config('NEO4J_URI', default="bolt://localhost:7687", cast=str)
 NEO4J_URI = config('NEO4J_URI', default="bolt://localhost:7687", cast=str)
