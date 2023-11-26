@@ -19,13 +19,28 @@ def is_internal_activity(activity_type_name: str):
     """
     return true if activity_type_name is considered as internal activity
     """
-    # todo define internal activity types here
-    internal_activities_types = []
+    internal_activities_types = [
+        'Abbey' 'ArtGalleryOrExhibitionGallery', 'BowlingAlley',
+        'BusinessPlace', 'Castle', 'Cathedral', 'CaveSinkholeOrAven', 'Church', 'Cinema',
+        'ClimbingWall', 'Collegiate', 'ConvenientService',
+        'Convent', 'ConventionCentre', 'CoveredMarket', 'CraftsmanShop', 'CulturalSite',
+        'Culture', 'Cybercafe',
+        'Fort', 'FortifiedCastle', 'Gymnasium', 'InterpretationCentre',
+        'LeisureComplex', 'LevyOrDike', 'Library', 'Lock', 'Monastery',
+        'Museum', 'NightClub', 'NonHousingRealEstateRental',
+        'PointOfView', 'Practice', 'Product', 'ReligiousSite', 'RemarkableBuilding',
+        'RemembranceSite', 'Rental', 'schema:CivicStructure',
+        'schema:Library', 'schema:LocalBusiness', 'schema:MovieTheater', 'schema:Museum',
+        'schema:NightClub', 'schema:Product', 'SportsAndLeisurePlace', 'Stables', 'Store',
+        'SwimmingPool', 'TeachingFarm', 'TechnicalHeritage', 'Temple', 'TennisComplex', 'Theater',
+        'TobogganBobsleigh', 'Tour', 'TouristTrain', 'Tower', 'Transport', 'Visit',
+        'WifiHotSpot'
+    ]
 
     return activity_type_name in internal_activities_types
 
 
-def is_jaccard_similar_name(name1, name2, limit=0.5):
+def is_jaccard_similar_name(name1, name2, limit=0.6):
     """
      Use Jaccard similarity to tell if two names are similar
     """
@@ -47,17 +62,17 @@ def is_jaccard_similar_name(name1, name2, limit=0.5):
 
 
 def compute_score(point: GeospatialPoint, user_input: UserData, external_data: ExternalData, rules=ScoringRules()):
-    score = 10
+    score = point.score
 
     if point.type == "POI":
         # boost user preferences
-        if point.category.lower() in user_input.favorite_poi_type_list:
+        if point.category in user_input.favorite_poi_type_list:
             index = user_input.favorite_poi_type_list.index(point.category)
             score += rules.user_preference_weight * (
                         len(user_input.favorite_poi_type_list) - index)
 
         # boost most popular POI
-        for i, poi in external_data.top_poi_list:
+        for i, poi in enumerate(external_data.top_poi_list):
             if is_jaccard_similar_name(point.name, poi.name):
                 score += rules.popularity_weight * (len(external_data.top_poi_list) - i)
                 break
@@ -65,29 +80,29 @@ def compute_score(point: GeospatialPoint, user_input: UserData, external_data: E
         # boost external activities if weather is good else internal
         if user_input.sensitivity_to_weather:
             if external_data.weather_forecast:
-                if not is_internal_activity(point.category.lower()):
+                if not is_internal_activity(point.category):
                     score += rules.weather_weight
 
             else:
-                if is_internal_activity(point.category.lower()):
+                if is_internal_activity(point.category):
                     score += rules.weather_weight
 
     if point.type == "Restaurant":
         # boost user preferences
-        if point.category.lower() in user_input.favorite_restaurant_categories:
+        if point.category in user_input.favorite_restaurant_categories:
             index = user_input.favorite_restaurant_categories.index(point.category)
             score += rules.user_preference_weight * (
                         len(user_input.favorite_restaurant_categories) - index)
 
         # boost most popular POI
-        for i, resto in external_data.top_restaurant_list:
+        for i, resto in enumerate(external_data.top_restaurant_list):
             if is_jaccard_similar_name(point.name, resto.name):
                 score += rules.popularity_weight * (len(external_data.top_restaurant_list) - i)
                 break
 
     if point.type == "Hosting":
         # boost user preferences
-        if point.category.lower() in user_input.favorite_hosting_categories:
+        if point.category in user_input.favorite_hosting_categories:
             index = user_input.favorite_hosting_categories.index(point.category)
             score += rules.user_preference_weight * (
                         len(user_input.favorite_hosting_categories) - index)
