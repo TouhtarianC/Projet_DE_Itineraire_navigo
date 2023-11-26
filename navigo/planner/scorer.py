@@ -1,4 +1,7 @@
 # Update the ScoringRules class to allow custom weights for scoring criteria
+import difflib
+import string
+
 from navigo.planner.models import GeospatialPoint, UserData, ExternalData
 
 
@@ -9,20 +12,42 @@ class ScoringRules:
         self.user_preference_weight = user_preference_weight
         self.popularity_weight = popularity_weight
         self.notation_weight = notation_weight
-        self.weather_weight = weather_weight  # todo tag interal activities
+        self.weather_weight = weather_weight
 
 
 def is_internal_activity(activity_type_name: str):
     """
     return true if activity_type_name is considered as internal activity
     """
+    # todo define internal activity types here
     internal_activities_types = []
 
     return activity_type_name in internal_activities_types
 
 
+def is_jaccard_similar_name(name1, name2, limit=0.5):
+    """
+     Use Jaccard similarity to tell if two names are similar
+    """
+    name1 = name1.lower()
+    name2 = name2.lower()
+
+    # Remove punctuation from both restaurant names
+    name1 = name1.translate(str.maketrans('', '', string.punctuation))
+    name2 = name2.translate(str.maketrans('', '', string.punctuation))
+
+    # Tokenize both restaurant names
+    name1_tokens = name1.split()
+    name2_tokens = name2.split()
+
+    # Calculate the Jaccard similarity between the tokenized restaurant names
+    jaccard_similarity = difflib.SequenceMatcher(None, name1_tokens, name2_tokens).ratio()
+
+    return jaccard_similarity >= limit
+
+
 def compute_score(point: GeospatialPoint, user_input: UserData, external_data: ExternalData, rules=ScoringRules()):
-    score = 0
+    score = 10
 
     if point.type == "POI":
         # boost user preferences
@@ -32,10 +57,10 @@ def compute_score(point: GeospatialPoint, user_input: UserData, external_data: E
                         len(user_input.favorite_poi_type_list) - index)
 
         # boost most popular POI
-        if point.name.lower() in [p.name for p in external_data.top_poi_list]:
-            index = next((i for i, p in enumerate(external_data.top_poi_list) if p.name == point.name.lower()))
-            score += rules.popularity_weight * (
-                    len(external_data.top_poi_list) - index)
+        for i, poi in external_data.top_poi_list:
+            if is_jaccard_similar_name(point.name, poi.name):
+                score += rules.popularity_weight * (len(external_data.top_poi_list) - i)
+                break
 
         # boost external activities if weather is good else internal
         if user_input.sensitivity_to_weather:
@@ -55,10 +80,10 @@ def compute_score(point: GeospatialPoint, user_input: UserData, external_data: E
                         len(user_input.favorite_restaurant_categories) - index)
 
         # boost most popular POI
-        if point.name.lower() in [p.name for p in external_data.top_restaurant_list]:
-            index = next((i for i, p in enumerate(external_data.top_restaurant_list) if p.name == point.name.lower()))
-            score += rules.popularity_weight * (
-                    len(external_data.top_restaurant_list) - index)
+        for i, resto in external_data.top_restaurant_list:
+            if is_jaccard_similar_name(point.name, resto.name):
+                score += rules.popularity_weight * (len(external_data.top_restaurant_list) - i)
+                break
 
     if point.type == "Hosting":
         # boost user preferences
