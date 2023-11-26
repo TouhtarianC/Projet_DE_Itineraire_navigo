@@ -7,7 +7,7 @@ from pkg_resources import parse_requirements
 # Allow to run setup.py from another directory.
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-VERSION = '0.0.5'
+VERSION = '0.0.6'
 
 # include data files in package
 data_files = ['requirements.txt']
