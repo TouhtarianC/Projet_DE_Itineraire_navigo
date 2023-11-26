@@ -17,7 +17,7 @@ class GeospatialPoint:
 
     category: str = ""
     notation: float = 0
-    score: float = 0.0
+    score: float = 10
 
     uuid: str = ""
     cluster: int | None = None
@@ -44,7 +44,6 @@ class GeospatialPoint:
                                self.score, self.uuid, self.cluster)
 
 
-
 @dataclass
 class POI(GeospatialPoint):
     type: str = "POI"
@@ -66,6 +65,7 @@ def db_raw_to_poi(db_raw: dict) -> POI:
                 result = session.run(query).data()
                 # print(f"neo4j result for poi.id ({db_raw.id}) = {result}")
         if result:
+            # todo: how to inject POI category here ??
             return POI(
                     name=document['LABEL']['fr'],
                     city=db_raw.CITY,
@@ -97,6 +97,7 @@ def db_raw_to_restaurant(db_raw: dict) -> Restaurant:
             name=db_raw['NAME'],
             city=db_raw['CITY'],
             city_code=db_raw['POSTAL_CODE'],
+            category=db_raw['TYPE'],
             )
 
 
@@ -121,6 +122,7 @@ def db_raw_to_hosting(db_raw: dict) -> Hosting:
             name=db_raw['NAME'],
             city=db_raw['CITY'],
             city_code=db_raw['POSTAL_CODE'],
+            category=db_raw['TYPE'],
         )
 
 
