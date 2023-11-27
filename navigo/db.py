@@ -62,7 +62,8 @@ def get_poi_by_zone(zone: int, rayon: int, days: int = 1) -> list:
             query = text(
                 f"""
                 SELECT * FROM {MARIADB_POI_TABLE} WHERE POSTAL_CODE in
-                {get_nearby_communes_as_where_clause(zone, radius)}
+                {get_nearby_communes_as_where_clause(zone, radius)} 
+                LIMIT {min_nb_POI * 3}
                 """
             )
             try:
@@ -98,7 +99,8 @@ def get_restaurants_by_zone(zone: int, rayon: int, days: int = 1) -> list:
             query = text(
                 f"""
                 SELECT * FROM {MARIADB_RESTAURANT_TABLE} WHERE POSTAL_CODE in
-                {get_nearby_communes_as_where_clause(zone, radius)}
+                {get_nearby_communes_as_where_clause(zone, radius)} 
+                LIMIT {min_nb_restau * 3 }
                 """
             )
             try:
@@ -133,7 +135,8 @@ def get_hosting_by_zone(zone: int, rayon: int, days: int = 1) -> list:
             query = text(
                 f"""
                     SELECT * FROM {MARIADB_HOSTING_TABLE} WHERE POSTAL_CODE in
-                    {get_nearby_communes_as_where_clause(zone, radius)}
+                    {get_nearby_communes_as_where_clause(zone, radius)} 
+                    LIMIT {min_nb_hosting * 3 }
                     """
             )
             hosting_list = con.execute(query)
@@ -164,7 +167,8 @@ def get_trails_by_zone(zone: int, rayon: int, days: int = 1) -> list:
             query = text(
                 f"""
                     SELECT * FROM {MARIADB_TRAIL_TABLE} WHERE POSTAL_CODE in
-                    {get_nearby_communes_as_where_clause(zone, radius)}
+                    {get_nearby_communes_as_where_clause(zone, radius)} 
+                    LIMIT {min_nb_trail * 3 }
                 """
             )
             trail_list = con.execute(query)
@@ -195,7 +199,7 @@ def get_wc_by_zone(zone: int, rayon: int, days: int = 1) -> list:
             query = text(
                 f"""
                     SELECT * FROM {MARIADB_WC_TABLE} WHERE POSTAL_CODE in
-                    {get_nearby_communes_as_where_clause(zone, radius)}
+                    {get_nearby_communes_as_where_clause(zone, radius)} 
                 """
             )
             wc_list = con.execute(query)
