@@ -17,7 +17,8 @@ from navigo.app.paginate import PageParams, PagedResponseSchema, paginate
 
 from navigo.db import get_restaurants_by_zone, get_poi_by_zone, \
     get_hosting_by_zone, get_trails_by_zone, get_wc_by_zone, get_poi_types, \
-    get_poi_themes, get_restaurants_types, get_hostings_types
+    get_poi_themes, get_restaurants_types, get_hostings_types, \
+    get_poi_categories_of_theme, get_poi_categories_of_type
 from navigo.external import get_zipcode
 from navigo.map import create_dash_app
 from navigo.planner.models import UserData
@@ -45,13 +46,15 @@ templates = Jinja2Templates(
 async def get_home(request: Request):
     today_date = datetime.now().strftime("%Y-%m-%d")
     try:
-        types = get_poi_types()
-        themes = get_poi_themes()
+        # types = get_poi_types()
+        # themes = get_poi_themes()
+        types_agg = get_poi_categories_of_type()
+        themes_agg = get_poi_categories_of_theme()
         rest_types = get_restaurants_types()
         hosting_types = get_hostings_types()
         logger.info(
-            f"""Serving form with types = ({[t['NAME'] for t in types]})
-            Serving form with themes = ({[t['NAME'] for t in themes]}
+            f"""Serving form with categories of types = ({[t['NAME'] for t in types_agg]})
+            Serving form with categories of themes = ({[t['NAME'] for t in themes_agg]}
             Serving form with rest_types = ({[t['TYPE'] for t in rest_types]})
             Serving form with hosting_types = ({[t['TYPE'] for t in hosting_types]})""")
     except Exception as e:
@@ -62,8 +65,8 @@ async def get_home(request: Request):
         "index.html",
         {"request": request,
          "today_date": today_date,
-         "types": types,
-         "themes": themes,
+         "types": types_agg,
+         "themes": themes_agg,
          "rest_types": rest_types,
          "hosting_types": hosting_types})
 
@@ -74,8 +77,10 @@ class UserTripRequestInput(BaseModel):
     trip_zone: str
     trip_start: str
     trip_duration: str
-    favorite_poi_type_list: list
-    favorite_poi_theme_list: list
+    # favorite_poi_type_list: list
+    # favorite_poi_theme_list: list
+    favorite_category_poi_type_list: list
+    favorite_category_poi_theme_list: list
     favorite_restaurant_categories: list
     favorite_hosting_categories: list
     means_of_transport: str
@@ -88,13 +93,26 @@ class UserTripRequestInput(BaseModel):
             _trip_zone = int(self.trip_zone)
         except ValueError:
             _trip_zone = get_zipcode(self.trip_zone)
+        
+        try: 
+            poi_type_list = get_poi_types()
+            poi_theme_list = get_poi_themes()
+            favorite_poi_type_list, favorite_poi_theme_list = [], []
+            for t in poi_type_list: 
+                if t['CATEGORY'] in self.favorite_category_poi_type_list: 
+                    favorite_poi_type_list.append(t['NAME'])
+            for t in poi_theme_list: 
+                if t['CATEGORY'] in self.favorite_category_poi_theme_list: 
+                    favorite_poi_theme_list.append(t['NAME'])
+        except: 
+            pass
 
         return UserData(
             trip_zone=_trip_zone,
             trip_start=self.trip_start,
             trip_duration=int(self.trip_duration),
-            favorite_poi_type_list=self.favorite_poi_type_list,
-            favorite_poi_theme_list=self.favorite_poi_theme_list,
+            favorite_poi_type_list=favorite_poi_type_list,
+            favorite_poi_theme_list=favorite_poi_theme_list,
             favorite_restaurant_categories=self.favorite_restaurant_categories,
             favorite_hosting_categories=self.favorite_hosting_categories,
             means_of_transport=self.means_of_transport,

@@ -99,7 +99,8 @@
         <input type="text" name="favorite_poi_categories" id="favorite_poi_categories" value="X, Y, Z">
         <br> -->
 
-        <label for="favorite_poi_type_list">Favorite POI Type:</label>
+        <!--label for="favorite_poi_type_list">Favorite POI Type:</label-->
+        <label for="favorite_poi_type_list">Favorite Categories of POI Type:</label>
         <select multiple id="favorite_poi_type_list" name="favorite_poi_type_list">
             {% for option in types %}
                 <option value="{{ option.NAME }}">{{ option.NAME }}</option>
@@ -107,7 +108,8 @@
         </select>
         <br>
 
-        <label for="favorite_poi_theme_list">Favorite POI Theme:</label>
+        <!--label for="favorite_poi_theme_list">Favorite POI Theme:</label-->
+        <label for="favorite_poi_theme_list">Favorite Categories of POI Theme:</label>
         <select multiple id="favorite_poi_theme_list" name="favorite_poi_theme_list">
             {% for option in themes %}
                 <option value="{{ option.NAME }}">{{ option.NAME }}</option>
@@ -213,8 +215,8 @@
                 trip_start: tripForm.trip_start.value,
                 trip_duration: tripForm.trip_duration.value,
                 means_of_transport: tripForm.means_of_transport.value,
-                favorite_poi_type_list: selectedPoiTypeOptions,
-                favorite_poi_theme_list: selectedPoiThemeOptions,
+                favorite_category_poi_type_list: selectedPoiTypeOptions,
+                favorite_category_poi_theme_list: selectedPoiThemeOptions,
                 favorite_restaurant_categories: selectedRestaurantCategoriesOptions,
                 favorite_hosting_categories: selectedHostingCategoriesOptions,
                 sensitivity_to_weather: tripForm.sensitivity_to_weather.value,

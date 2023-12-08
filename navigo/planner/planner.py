@@ -1,4 +1,4 @@
-from navigo.db import get_db_internal_nodes_data_by_zone
+from navigo.db import get_db_internal_nodes_data_by_zone, get_poi_types, get_poi_themes
 from navigo.external import get_external_data
 from navigo.itinerary import compute_itinerary
 from navigo.planner.models import UserData, InternalNodesData, ExternalData
