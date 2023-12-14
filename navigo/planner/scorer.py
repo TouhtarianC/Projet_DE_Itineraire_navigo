@@ -61,15 +61,26 @@ def is_jaccard_similar_name(name1, name2, limit=0.6):
     return jaccard_similarity >= limit
 
 
-def compute_score(point: GeospatialPoint, user_input: UserData, external_data: ExternalData, rules=ScoringRules()):
+def compute_score(point: GeospatialPoint, user_input: UserData, \
+                external_data: ExternalData, rules=ScoringRules(), \
+                ):
     score = point.score
 
     if point.type == "POI":
         # boost user preferences
-        if point.category in user_input.favorite_poi_type_list:
-            index = user_input.favorite_poi_type_list.index(point.category)
-            score += rules.user_preference_weight * (
-                        len(user_input.favorite_poi_type_list) - index)
+        for poi_type in point.type_list:
+            if poi_type in user_input.favorite_poi_type_list:
+                #index = user_input.favorite_poi_type_list.index(poi_type)
+                index = user_input.favorite_poi_type_list.index(poi_type)
+                score += rules.user_preference_weight * (
+                            len(user_input.favorite_poi_type_list) - index)
+
+        for poi_theme in point.theme_list:
+            if poi_theme in user_input.favorite_poi_theme_list:
+                #index = user_input.favorite_poi_theme_list.index(poi_theme)
+                index = user_input.favorite_poi_theme_list.index(poi_theme)
+                score += rules.user_preference_weight * (
+                            len(user_input.favorite_poi_theme_list) - index)
 
         # boost most popular POI
         for i, poi in enumerate(external_data.top_poi_list):

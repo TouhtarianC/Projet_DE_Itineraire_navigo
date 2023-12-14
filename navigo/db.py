@@ -2,8 +2,9 @@ import logging
 
 from sqlalchemy import create_engine, text
 from sqlalchemy_utils import database_exists
-
+from sqlalchemy.orm import Session
 from navigo.external import get_nearby_communes
+from navigo.planner.models_DB_ORM import Poi
 from navigo.planner.models import InternalNodesData, db_raw_to_poi, db_raw_to_restaurant, db_raw_to_hosting, \
     db_raw_to_trail, db_raw_to_wc
 from navigo.settings import MARIADB_USER, MARIADB_PWD, MARIADB_HOST, MARIADB_DB, MARIADB_POI_TABLE, \
@@ -51,6 +52,8 @@ def get_poi_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     res_list = []
     min_nb_POI = MIN_FETCHED_POI_BY_ZONE_PER_DAY * days
 
+    session = Session(engine)
+
     while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and \
             len(poi_list) < min_nb_POI:
 
@@ -58,19 +61,17 @@ def get_poi_by_zone(zone: int, rayon: int, days: int = 1) -> list:
         logger.info(
             f"running iteration {iteration} to fetch POI with radius: {radius}")
 
-        with engine.begin() as con:
-            query = text(
-                f"""
-                SELECT * FROM {MARIADB_POI_TABLE} WHERE POSTAL_CODE in
-                {get_nearby_communes_as_where_clause(zone, radius)} 
-                LIMIT {min_nb_POI * 3}
-                """
-            )
-            try:
-                poi_list = con.execute(query)
-                poi_list = poi_list.mappings().all()
-            except Exception as e:
-                logger.error(f"error while fetching POI: {e}")
+        query = text(
+            f"""
+            SELECT * FROM {MARIADB_POI_TABLE} WHERE POSTAL_CODE in
+            {get_nearby_communes_as_where_clause(zone, radius)} 
+            LIMIT {min_nb_POI * 3}
+            """
+        )
+        try:
+            poi_list=session.query(Poi).from_statement(query).all()
+        except Exception as e:
+            logger.error(f"error while fetching POI: {e}")
 
         iteration += 1
 
@@ -81,7 +82,7 @@ def get_poi_by_zone(zone: int, rayon: int, days: int = 1) -> list:
         return res_list
     else:
         return None
-
+    
 
 def get_restaurants_by_zone(zone: int, rayon: int, days: int = 1) -> list:
     iteration = 0
@@ -238,6 +239,24 @@ def get_poi_types() -> list:
     return poi_types
 
 
+def get_poi_categories_of_type() -> list:
+    poi_type_categories = []
+    with engine.begin() as con:
+        query = text(
+            f"""SELECT DISTINCT CATEGORY FROM {MARIADB_POI_TYPE_TABLE} WHERE CATEGORY <> 'Other' ORDER BY CATEGORY """
+        )
+        try:
+            res = con.execute(query)
+            res = res.mappings().all()
+            for t in res:
+                poi_type_categories.append({'NAME':t['CATEGORY']})
+        except Exception as e:
+            logger.error(f"error while fetching categories of POI types: {e}")
+        # logger.info(f"res = {res_dict}")
+    
+    return poi_type_categories
+
+
 def get_poi_themes() -> list:
     poi_themes = []
     with engine.begin() as con:
@@ -251,6 +270,24 @@ def get_poi_themes() -> list:
             logger.error(f"error while fetching POI themes: {e}")
 
     return poi_themes
+
+
+def get_poi_categories_of_theme() -> list:
+    poi_theme_categories = []
+    with engine.begin() as con:
+        query = text(
+            f"""SELECT DISTINCT CATEGORY FROM {MARIADB_POI_THEME_TABLE} WHERE CATEGORY <> 'Other' ORDER BY CATEGORY """
+        )
+        try:
+            res = con.execute(query)
+            res = res.mappings().all()
+            for t in res:
+                poi_theme_categories.append({'NAME':t['CATEGORY']})
+        except Exception as e:
+            logger.error(f"error while fetching categories of POI themes: {e}")
+        # logger.info(f"res = {res_dict}")
+
+    return poi_theme_categories
 
 
 def get_restaurants_types() -> list:

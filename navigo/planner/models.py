@@ -2,7 +2,8 @@ from dataclasses import dataclass, field
 from pymongo import MongoClient
 from neo4j import GraphDatabase
 from navigo.settings import MONGODB_URI, MONGODB_DB, MONGODB_POI_COLLECTION, NEO4J_URI, NEO4J_USER, NEO4J_PWD
-
+from navigo.planner.models_DB_ORM import Poi
+from typing import List
 
 @dataclass
 class GeospatialPoint:
@@ -47,13 +48,15 @@ class GeospatialPoint:
 @dataclass
 class POI(GeospatialPoint):
     type: str = "POI"
+    type_list: List[str] = None
+    theme_list: List[str] = None
+    
 
-
-def db_raw_to_poi(db_raw: dict) -> POI:
+def db_raw_to_poi(db_raw: Poi) -> POI:
+    # connect to mongodb
     collection = MongoClient(MONGODB_URI)[
             MONGODB_DB][MONGODB_POI_COLLECTION]
-    # print("connection mongoDB ok")
-
+    
     document = collection.find_one({'UUID': db_raw.UUID})
     if document:
         # connect to neo4j
@@ -63,9 +66,14 @@ def db_raw_to_poi(db_raw: dict) -> POI:
                     f"MATCH (n) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
                 )
                 result = session.run(query).data()
-                # print(f"neo4j result for poi.id ({db_raw.id}) = {result}")
         if result:
-            # todo: how to inject POI category here ??
+            # add list of poi types and list of poi themes (it can be several types)
+            type_list, theme_list=[], []
+            for poi_type in db_raw.POI_TYPES:
+                type_list.append(poi_type.NAME)
+            for poi_theme in db_raw.POI_THEMES:
+                theme_list.append(poi_theme.NAME)
+            
             return POI(
                     name=document['LABEL']['fr'],
                     city=db_raw.CITY,
@@ -73,6 +81,8 @@ def db_raw_to_poi(db_raw: dict) -> POI:
                     uuid=db_raw.UUID,
                     latitude=result[0]['n']['LATITUDE'],
                     longitude=result[0]['n']['LONGITUDE'],
+                    type_list=type_list,
+                    theme_list=theme_list
                     )
 
 
@@ -186,7 +196,6 @@ class UserData:
     trip_zone: int = 33000
     trip_start: str = "2024-01-08"
     trip_duration: int = 7
-    # favorite_poi_categories: list[str] = field(default_factory=list)
     favorite_poi_type_list: list[str] = field(default_factory=list)
     favorite_poi_theme_list: list[str] = field(default_factory=list)
     favorite_restaurant_categories: list[str] = field(default_factory=list)
