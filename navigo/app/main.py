@@ -12,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from a2wsgi import WSGIMiddleware
 from pydantic import BaseModel
+from starlette.routing import Mount
 
 from navigo.app.paginate import PageParams, PagedResponseSchema, paginate
 
@@ -95,6 +96,9 @@ class UserTripRequestInput(BaseModel):
             _trip_zone = get_zipcode(self.trip_zone)
         
         try: 
+            # transform from a request of a list of categories to a list of types (or themes)
+            # it will allowed to stay with a list of poi types and a list of poi themes
+            # for the UserData 
             poi_type_list = get_poi_types()
             poi_theme_list = get_poi_themes()
             favorite_poi_type_list, favorite_poi_theme_list = [], []
@@ -135,6 +139,13 @@ async def create_trip_recommendations(user_request_input: UserTripRequestInput):
 
         # create and serve Dash app
         _dash_app = create_dash_app(geospatial_point_list)
+
+        # delete any /dash mount before updating the dashboard
+        for index, route in enumerate(app.routes):
+            if isinstance(route, Mount) and route.path == "/dash":
+                del app.routes[index]
+                break
+
         app.mount(
             "/dash", WSGIMiddleware(
                 _dash_app.server))

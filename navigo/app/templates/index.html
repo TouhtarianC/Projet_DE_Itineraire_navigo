@@ -240,6 +240,9 @@
             submitBtn.disabled = false;
             document.getElementById('loadingOverlay').style.display = 'none';
 
+            // Remove the progress bar
+            progressBarContainer.remove();
+
             // Redirect the user to the /dash endpoint
             window.location.href = '/dash';
         });
