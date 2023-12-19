@@ -120,7 +120,7 @@ class UserTripRequestInput(BaseModel):
             favorite_restaurant_categories=self.favorite_restaurant_categories,
             favorite_hosting_categories=self.favorite_hosting_categories,
             means_of_transport=self.means_of_transport,
-            sensitivity_to_weather=bool(self.sensitivity_to_weather),
+            sensitivity_to_weather=bool(self.sensitivity_to_weather == 'true'),
             days_on_hiking=float(self.days_on_hiking)
         )
 
