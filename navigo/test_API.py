@@ -28,19 +28,25 @@ for _ in range(100):
         'uuid': fake.uuid4(),
         'cluster': None,
         'day': None,
-        'rank': None
+        'rank': None,
+        "type_list": ["PlaceOfInterest","InterpretationCentre","CulturalSite","PointOfInterest","schema:LocalBusiness"],
+        "theme_list": ["InTown"]
     }
     mock_POIs.append(POI(**poi))
     mock_POIs_result.append(poi)
 
 
 def test_get_pois_with_non_int_params():
-    response = client.get("/data/pois?zip_code=balbla&rayon=10")
-    # check results
-    assert response.status_code == 500
-    response = client.get("/data/pois?zip_code=1234&rayon=bou")
-    # check results
-    assert response.status_code == 500
+    # mock get_poi_by_zone to be independant to BDD
+    with patch("navigo.app.main.get_poi_by_zone") as mock_get_poi_by_zone:
+        mock_get_poi_by_zone.return_value = mock_POIs
+
+        response = client.get("/data/pois?zip_code=balbla&rayon=10")
+        # check results
+        assert response.status_code == 500
+        response = client.get("/data/pois?zip_code=1234&rayon=bou")
+        # check results
+        assert response.status_code == 500
 
 
 def test_get_pois():
@@ -131,12 +137,17 @@ for _ in range(100):
 
 
 def test_get_restaurants_with_non_int_params():
-    response = client.get("/data/restaurants?zip_code=balbla&rayon=10")
-    # check results
-    assert response.status_code == 500
-    response = client.get("/data/restaurants?zip_code=1234&rayon=bou")
-    # check results
-    assert response.status_code == 500
+    # mock get_restaurants_by_zone to be independant to BDD
+    with patch("navigo.app.main.get_restaurants_by_zone") as mock_get_restaurants_by_zone:
+        mock_get_restaurants_by_zone.return_value = mock_restaurants
+        
+        response = client.get("/data/restaurants?zip_code=balbla&rayon=10")
+        # check results
+        assert response.status_code == 500
+        
+        response = client.get("/data/restaurants?zip_code=1234&rayon=bou")
+        # check results
+        assert response.status_code == 500
 
 
 # check get_restaurants
@@ -195,12 +206,16 @@ for _ in range(100):
 
 
 def test_get_hostings_with_non_int_params():
-    response = client.get("/data/hostings?zip_code=balbla&rayon=10")
-    # check results
-    assert response.status_code == 500
-    response = client.get("/data/hostings?zip_code=1234&rayon=bou")
-    # check results
-    assert response.status_code == 500
+    # mock get_hostings_by_zone to be independant to BDD
+    with patch("navigo.app.main.get_hosting_by_zone") as mock_get_hosting_by_zone:
+        mock_get_hosting_by_zone.return_value = mock_hostings
+
+        response = client.get("/data/hostings?zip_code=balbla&rayon=10")
+        # check results
+        assert response.status_code == 500
+        response = client.get("/data/hostings?zip_code=1234&rayon=bou")
+        # check results
+        assert response.status_code == 500
 
 
 # check get_hostings
@@ -258,12 +273,16 @@ for _ in range(100):
 
 
 def test_get_trails_with_non_int_params():
-    response = client.get("/data/trails?zip_code=balbla&rayon=10")
-    # check results
-    assert response.status_code == 500
-    response = client.get("/data/trails?zip_code=1234&rayon=bou")
-    # check results
-    assert response.status_code == 500
+    # mock get_trails_by_zone to be independant to BDD
+    with patch("navigo.app.main.get_trails_by_zone") as mock_get_trails_by_zone:
+        mock_get_trails_by_zone.return_value = mock_trails
+
+        response = client.get("/data/trails?zip_code=balbla&rayon=10")
+        # check results
+        assert response.status_code == 500
+        response = client.get("/data/trails?zip_code=1234&rayon=bou")
+        # check results
+        assert response.status_code == 500
 
 
 # check get_trails
@@ -321,12 +340,16 @@ for _ in range(100):
 
 
 def test_get_wcs_with_non_int_params():
-    response = client.get("/data/wcs?zip_code=balbla&rayon=10")
-    # check results
-    assert response.status_code == 500
-    response = client.get("/data/wcs?zip_code=1234&rayon=bou")
-    # check results
-    assert response.status_code == 500
+    # mock get_WCs_by_zone to be independant to BDD
+    with patch("navigo.app.main.get_wc_by_zone") as mock_get_wc_by_zone:
+        mock_get_wc_by_zone.return_value = mock_WCs
+
+        response = client.get("/data/wcs?zip_code=balbla&rayon=10")
+        # check results
+        assert response.status_code == 500
+        response = client.get("/data/wcs?zip_code=1234&rayon=bou")
+        # check results
+        assert response.status_code == 500
 
 # check get_wcs
 
