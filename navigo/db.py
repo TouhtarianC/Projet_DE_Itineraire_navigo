@@ -236,8 +236,8 @@ def get_poi_types() -> list:
     poi_types = []
     session = maria_connect()
     try:
-        res = con.execute(query)
-        poi_types = res.mappings().all()
+        poi_types = session.query(PoiType).all()
+        # poi_types = res.mappings().all()
     except Exception as e:
         logger.error(f"error while fetching POI types: {e}")
     finally:
