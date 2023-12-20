@@ -53,8 +53,8 @@ async def get_home(request: Request):
         rest_types = get_restaurants_types()
         hosting_types = get_hostings_types()
         logger.info(
-            f"""Serving form with categories of types = ({[t['NAME'] for t in types_agg]})
-            Serving form with categories of themes = ({[t['NAME'] for t in themes_agg]}
+            f"""Serving form with categories of types = ({types_agg})
+            Serving form with categories of themes = ({themes_agg})
             Serving form with rest_types = ({[t['TYPE'] for t in rest_types]})
             Serving form with hosting_types = ({[t['TYPE'] for t in hosting_types]})""")
     except Exception as e:

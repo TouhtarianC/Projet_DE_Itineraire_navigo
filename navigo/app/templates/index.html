@@ -103,7 +103,7 @@
         <label for="favorite_poi_type_list">Favorite Categories of POI Type:</label>
         <select multiple id="favorite_poi_type_list" name="favorite_poi_type_list">
             {% for option in types %}
-                <option value="{{ option.NAME }}">{{ option.NAME }}</option>
+                <option value="{{ option }}">{{ option }}</option>
             {% endfor %}
         </select>
         <br>
@@ -112,7 +112,7 @@
         <label for="favorite_poi_theme_list">Favorite Categories of POI Theme:</label>
         <select multiple id="favorite_poi_theme_list" name="favorite_poi_theme_list">
             {% for option in themes %}
-                <option value="{{ option.NAME }}">{{ option.NAME }}</option>
+                <option value="{{ option }}">{{ option }}</option>
             {% endfor %}
         </select>
         <br>
