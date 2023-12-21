@@ -66,8 +66,6 @@ def create_nodes(poi_list, restaurant_list, hosting_list, trail_list):
                 session.run(query, params=params_node)
 
 # Identify a POI among a list with its uuid, return a POI
-
-
 def find_node_by_uuid(poi_list, uuid):
     res = next((poi for poi in poi_list if poi.uuid == uuid), None)
 
@@ -188,30 +186,14 @@ def find_next_poi_from_other(start_uuid, start_type, cluster=None):
 # Find next restaurant to have lunch or dinner after POI
 def find_next_restaurant_from_poi(start_uuid, start_type):
 
-    ray_f = 200
-    n = find_stop_around_number(start_uuid, start_type, "Restaurant2", ray_f)
-
-    while (ray_f < 20000 and n < 3):
-        ray_f += 100
-        n = find_stop_around_number(
-            start_uuid, start_type, "Restaurant2", ray_f)
     queryCreateToNextRestaurant = (
         f"MATCH (start:{start_type} {{UUID:'{start_uuid}'}}) \
-        MATCH (m:Restaurant2) \
-        WHERE round(point.distance( \
-                point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
-                point({{longitude: m.LONGITUDE, latitude: m.LATITUDE}}) \
-                )) <= {ray_f} \
-        WITH \
-            max(m.SCORE) as score_max, start \
         MATCH (end:Restaurant2) \
-        WHERE round(point.distance( \
+        WITH start, end \
+        ORDER BY round(point.distance( \
                 point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
                 point({{longitude: end.LONGITUDE, latitude: end.LATITUDE}}) \
-                )) <= {ray_f} \
-            AND end.SCORE = score_max \
-        WITH start, end \
-        ORDER BY score_max DESC \
+                )) \
         LIMIT 1 \
         MERGE (start)-[r:TO_NEXT_RESTAURANT]->(end) \
         SET r.DISTANCE=round(point.distance( \
@@ -232,29 +214,14 @@ def find_next_restaurant_from_poi(start_uuid, start_type):
 # Find next hosting to stay after a restaurant
 def find_next_hosting_from_restaurant(start_uuid, start_type):
 
-    ray_f = 200
-    n = find_stop_around_number(start_uuid, start_type, "Hosting2", ray_f)
-
-    while (ray_f < 20000 and n < 3):
-        ray_f += 100
-        n = find_stop_around_number(start_uuid, start_type, "Hosting2", ray_f)
     queryCreateToNextHosting = (
         f"MATCH (start:{start_type} {{UUID:'{start_uuid}'}}) \
-        MATCH (m:Hosting2) \
-        WHERE round(point.distance( \
-                point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
-                point({{longitude: m.LONGITUDE, latitude: m.LATITUDE}}) \
-                )) <= {ray_f} \
-        WITH \
-            max(m.SCORE) as score_max, start \
         MATCH (end:Hosting2) \
-        WHERE round(point.distance( \
+        WITH start, end \
+        ORDER BY round(point.distance( \
                 point({{longitude: start.LONGITUDE, latitude: start.LATITUDE}}), \
                 point({{longitude: end.LONGITUDE, latitude: end.LATITUDE}}) \
-                )) <= {ray_f} \
-            AND end.SCORE = score_max \
-        WITH start, end \
-        ORDER BY score_max DESC \
+                )) \
         LIMIT 1 \
         MERGE (start)-[r:TO_NEXT_HOSTING]->(end) \
         SET r.DISTANCE=round(point.distance( \
