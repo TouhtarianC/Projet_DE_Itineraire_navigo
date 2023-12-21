@@ -85,7 +85,6 @@ def get_poi_by_zone(zone: int, rayon: int, days: int = 1) -> (list, list):
     """function that return a list of POI and a list of postal codes where POI are located"""
     iteration = 0
     poi_list = []
-    res_list = []
     min_nb_POI = MIN_FETCHED_POI_BY_ZONE_PER_DAY * days
 
     session = maria_connect()
