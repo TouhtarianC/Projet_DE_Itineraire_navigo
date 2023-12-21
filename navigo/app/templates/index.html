@@ -88,12 +88,12 @@
         <input type="number" name="trip_duration" id="trip_duration" value="7" required>
         <br>
 
-        <label for="means_of_transport">Means of Transport:</label>
+        <!-- <label for="means_of_transport">Means of Transport:</label>
         <select name="means_of_transport" id="means_of_transport">
-            <option value="by foot">By Foot</option>
             <option value="car">Car</option>
+            <option value="by foot">By Foot</option>
         </select>
-        <br>
+        <br> -->
 
         <!-- <label for="favorite_poi_categories">Favorite POI Categories (comma-separated):</label>
         <input type="text" name="favorite_poi_categories" id="favorite_poi_categories" value="X, Y, Z">
@@ -214,7 +214,7 @@
                 trip_zone: tripForm.trip_zone.value,
                 trip_start: tripForm.trip_start.value,
                 trip_duration: tripForm.trip_duration.value,
-                means_of_transport: tripForm.means_of_transport.value,
+                // means_of_transport: tripForm.means_of_transport.value,
                 favorite_category_poi_type_list: selectedPoiTypeOptions,
                 favorite_category_poi_theme_list: selectedPoiThemeOptions,
                 favorite_restaurant_categories: selectedRestaurantCategoriesOptions,
@@ -239,6 +239,9 @@
             // Hide the loading spinner and enable submit
             submitBtn.disabled = false;
             document.getElementById('loadingOverlay').style.display = 'none';
+            
+            // Remove the progress bar
+            progressBarContainer.remove();
 
             // Redirect the user to the /dash endpoint
             window.location.href = '/dash';

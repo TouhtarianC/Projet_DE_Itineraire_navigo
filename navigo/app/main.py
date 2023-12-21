@@ -6,12 +6,13 @@ from pathlib import Path
 from typing import Annotated
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request, Query, Depends
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from a2wsgi import WSGIMiddleware
 from pydantic import BaseModel
+from starlette.routing import Mount
 
 from navigo.app.paginate import PageParams, PagedResponseSchema, paginate
 
@@ -83,7 +84,7 @@ class UserTripRequestInput(BaseModel):
     favorite_category_poi_theme_list: list
     favorite_restaurant_categories: list
     favorite_hosting_categories: list
-    means_of_transport: str
+    # means_of_transport: str
     sensitivity_to_weather: str
     days_on_hiking: str
 
@@ -95,6 +96,9 @@ class UserTripRequestInput(BaseModel):
             _trip_zone = get_zipcode(self.trip_zone)
         
         try: 
+            # transform from a request of a list of categories to a list of types (or themes)
+            # it will allowed to stay with a list of poi types and a list of poi themes
+            # for the UserData
             poi_type_list = get_poi_types()
             poi_theme_list = get_poi_themes()
             favorite_poi_type_list, favorite_poi_theme_list = [], []
@@ -115,8 +119,8 @@ class UserTripRequestInput(BaseModel):
             favorite_poi_theme_list=favorite_poi_theme_list,
             favorite_restaurant_categories=self.favorite_restaurant_categories,
             favorite_hosting_categories=self.favorite_hosting_categories,
-            means_of_transport=self.means_of_transport,
-            sensitivity_to_weather=bool(self.sensitivity_to_weather),
+            # means_of_transport=self.means_of_transport,
+            sensitivity_to_weather=bool(self.sensitivity_to_weather == 'true'),
             days_on_hiking=float(self.days_on_hiking)
         )
 
@@ -129,12 +133,19 @@ async def create_trip_recommendations(user_request_input: UserTripRequestInput):
             user_request_input.model_dump(),
             indent=4)}""")
 
-        geospatial_point_list = plan_trip(user_request_input.to_user_data())
+        geospatial_point_list, selected_toilets = plan_trip(user_request_input.to_user_data())
 
-        logger.info(f"result: {geospatial_point_list}")
+        # logger.info(f"result: {geospatial_point_list}")
 
         # create and serve Dash app
-        _dash_app = create_dash_app(geospatial_point_list)
+        _dash_app = create_dash_app(geospatial_point_list, selected_toilets)
+
+        # delete any /dash mount before updating the dashboard
+        for index, route in enumerate(app.routes):
+            if isinstance(route, Mount) and route.path == "/dash":
+                del app.routes[index]
+                break
+
         app.mount(
             "/dash", WSGIMiddleware(
                 _dash_app.server))
