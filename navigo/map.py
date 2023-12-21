@@ -54,7 +54,7 @@ def calculate_zoom(df):
 
 
 def get_symbol(point_type, is_first_point, is_last_point):
-    logger.info('Adding appropriate symbol to data')
+    # logger.info('Adding appropriate symbol to data')
     if is_first_point:
         return '🚀' 
     elif is_last_point:
@@ -75,7 +75,7 @@ def add_points_to_figure(fig, df, filter_name=None):
     
     
     for i, point in df.iterrows():
-        logger.info(f"Point {i} : {point['name']}")
+        # logger.info(f"Point {i} : {point['name']}")
         if filter_name and point['name'] != filter_name:
             continue
                                 
@@ -104,7 +104,7 @@ def add_points_to_figure(fig, df, filter_name=None):
 
 
 def add_lines_between_days(fig, df, selected_day=None):
-    logger.info('Adding lines to map')
+    # logger.info('Adding lines to map')
     df = df.sort_values(by=['day', 'rank']).reset_index(drop=True)
     #logger.info(f'Day points: \n{day_points}')
     
@@ -140,7 +140,7 @@ def add_lines_between_days(fig, df, selected_day=None):
             hoverinfo='text',
             showlegend=False
         ))
-        logger.info('Middle line point added')
+        # logger.info('Middle line point added')
                            
         # trace lines                        
         fig.add_trace(go.Scattermapbox(
@@ -152,7 +152,7 @@ def add_lines_between_days(fig, df, selected_day=None):
             hoverinfo='none',
             showlegend=False            
         ))
-        logger.info(f"Line {current_point['name']} successfully updated")
+        # logger.info(f"Line {current_point['name']} successfully updated")
               
 
 def create_figure(df):
@@ -191,7 +191,7 @@ def create_figure(df):
     return fig
 
 
-def create_dash_app(geospatial_point_list) -> dash.Dash:
+def create_dash_app(geospatial_point_list: list, selected_toilets: list = []) -> dash.Dash:
     '''
     Creates a Dash web application layout.
 

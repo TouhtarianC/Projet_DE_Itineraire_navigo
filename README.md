@@ -23,7 +23,7 @@ Algorithm input are captured from user data and computed external data
 5. ordered favorite categories of Hosting (default to )
 6. meantime to be spent on POI in days (default to 0.5 day)
 7. minimal tolerated notation (default to 3 on 5)
-8. means of transport (default to : by foot)
+8. means of transport (default to : by foot) => Not Implemented
 9. sensitivity to weather (default to 5 to 10) 
 10. time to be spent on hiking in days (default to half of duration) 
 

@@ -268,7 +268,8 @@ def compute_itinerary(first_poi: POI,
                       selected_pois: list[POI],
                       selected_restaurants: list[Restaurant],
                       selected_hostings: list[Hosting],
-                      selected_trails: list[Trail]):
+                      selected_trails: list[Trail],
+                      selected_toilets: list[POI] = []):
 
     # Clear nodes and relationships
     for relationship_type in ['TO_NEXT_POI', 'TO_NEXT_RESTAURANT',
@@ -436,7 +437,7 @@ def compute_itinerary(first_poi: POI,
             poi.day, poi.rank = day, 1
             res_pois.append(poi)
 
-    return res_pois + res_restaurants + res_hostings + res_trails
+    return res_pois + res_restaurants + res_hostings + res_trails, selected_toilets
 
 
 if __name__ == '__main__':

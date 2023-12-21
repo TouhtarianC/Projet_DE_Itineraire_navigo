@@ -4,20 +4,26 @@ from navigo.itinerary import compute_itinerary
 from navigo.planner.models import UserData, InternalNodesData, ExternalData
 from navigo.planner.scorer import compute_score
 from navigo.planner.clustering import clustering_by_days
+import logging
 
+logger = logging.getLogger(__name__)
 
 def _plan_trip(_user_input: UserData, internal_nodes_data: InternalNodesData, _external_data: ExternalData):
 
+    logger.info("start planning trip")
     # Step 3: Scoring nodes based on user criteria
     for node in internal_nodes_data.get_all_nodes():
         try:
-            node.score = compute_score(node, _user_input, _external_data)
+            if node is not None:
+                node.score = compute_score(node, _user_input, _external_data)
         except Exception as e:
-            print(f"error while computing score for node ({node}): {e}")
+            logger.error(f"error while computing score for node ({node}): {e}")
+
+    logger.info("scoring done")
 
     # Step 4: Divided nodes by travelling  days (clustering)
     clustering_by_days(_user_input.trip_duration, internal_nodes_data.poi_list)
-    #  print(f"poi after clustering = {internal_nodes_data}")
+    logger.info(f"clustering done")
 
     # Step 4: Compute the maximum points that can be visited
     max_points_by_day = 4
@@ -29,38 +35,40 @@ def _plan_trip(_user_input: UserData, internal_nodes_data: InternalNodesData, _e
     selected_poi = internal_nodes_data.select_top_points_by_day(
         _user_input.trip_duration,
         max_points_by_day)
-    # print(f"selected = {selected_poi}")
+    # logger.info(f"selected = {selected_poi}")
 
     first_poi = sorted(selected_poi, key=lambda x: x.score, reverse=True)[0]
-    print(f"first_POI = {first_poi}")
+    logger.info(f"first_POI = {first_poi}")
 
-    _, selected_restaurant, selected_hosting, selected_trail = internal_nodes_data.get_sorted_points()
+    _, selected_restaurant, selected_hosting, selected_trail, selected_toilets = internal_nodes_data.get_sorted_points()
 
     # Step 6: compute itinary for each days
-    # itinerary = compute_itinerary(
+    # itinerary, selected_toilets = compute_itinerary(
     #     first_poi, selected_poi,
     #     selected_restaurant[:max_restaurants],
     #     selected_hosting[:max_hostings],
-    #     selected_trail[:max_trails]
+    #     selected_trail[:max_trails],
+    #     selected_toilets
     #     )
-    itinerary = compute_itinerary(
+    itinerary, selected_toilets = compute_itinerary(
         first_poi, selected_poi,
         selected_restaurant,
         selected_hosting,
-        selected_trail
+        selected_trail,
+        selected_toilets
         )
     # after this step, itinerary is composed of POI, Restaurants, Hostings and Trails List where day and rank are used to map by day, as the order rank) 
 
-    return itinerary
+    return itinerary, selected_toilets
 
 
 def plan_trip(_user_input: UserData):
 
     # Step 1: Geographic Selection of POI, Restaurant, Hosting, and Trail
-    if _user_input.means_of_transport == 'by foot':
-        rayon = 5
-    else:
-        rayon = 100
+    # if _user_input.means_of_transport == 'by foot':
+    #     rayon = 5
+    # else:
+    rayon = 10
     # internal_nodes_data = get_db_internal_nodes_data_by_zone(_user_input.trip_zone, rayon)
     internal_nodes_data = get_db_internal_nodes_data_by_zone(_user_input.trip_zone, rayon, _user_input.trip_duration)
 

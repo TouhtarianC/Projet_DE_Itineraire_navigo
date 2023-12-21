@@ -202,7 +202,7 @@ class UserData:
     favorite_hosting_categories: list[str] = field(default_factory=list)
     # meantime_on_poi: float = 0.5
     # minimal_notation: int = 3
-    means_of_transport: str = "by foot"
+    # means_of_transport: str = "by foot"
     sensitivity_to_weather: bool = True
     days_on_hiking: float = 0
 
@@ -220,17 +220,35 @@ class InternalNodesData:
     restaurant_list: list[Restaurant]
     hosting_list: list[Hosting]
     trail_list: list[Trail]
+    toilets_list: list[WC]
 
     def get_all_nodes(self):
         return self.poi_list + \
             self.restaurant_list + self.hosting_list + self.trail_list
 
     def get_sorted_points(self):
+        try:
+            poi_sorted = sorted(self.poi_list, key=lambda x: x.score, reverse=True)
+        except AttributeError:
+            poi_sorted = []
+        try:
+            restaurant_sorted = sorted(self.restaurant_list, key=lambda x: x.score, reverse=True)
+        except AttributeError:
+            restaurant_sorted = []
+        try:
+            hosting_sorted = sorted(self.hosting_list, key=lambda x: x.score, reverse=True)
+        except AttributeError:
+            hosting_sorted = []
+        try:
+            trail_sorted = sorted(self.trail_list, key=lambda x: x.score, reverse=True)
+        except AttributeError:
+            trail_sorted = []
         return (
-            sorted(self.poi_list, key=lambda x: x.score, reverse=True),
-            sorted(self.restaurant_list, key=lambda x: x.score, reverse=True),
-            sorted(self.hosting_list, key=lambda x: x.score, reverse=True),
-            sorted(self.trail_list, key=lambda x: x.score, reverse=True)
+            poi_sorted,
+            restaurant_sorted,
+            hosting_sorted,
+            trail_sorted,
+            self.toilets_list
         )
 
     def select_top_points_by_day(self, nb_days: int, max_pois_by_day: int):

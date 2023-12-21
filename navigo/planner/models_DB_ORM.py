@@ -270,13 +270,14 @@ class PoiType(Base):
         default=str(uuid.uuid4()),
         index=True)
     NAME: Mapped[str] = Column(String(30), unique=True)
+    CATEGORY: Mapped[str] = Column(String(50), default='')
     POIS: Mapped[List['Poi']] = relationship( \
         'Poi',
         secondary=association_PoiType_Poi,
         back_populates='POI_TYPES')
 
     def __repr__(self) -> str:
-        return f"PoiType(UUID={self.UUID!r}, NAME={self.NAME!r})"
+        return f"PoiType(UUID={self.UUID!r}, NAME={self.NAME!r}, CATEGORY={self.CATEGORY!r})"
 
     def __init__(self, NAME):
         self.UUID = str(uuid.uuid4())
@@ -291,13 +292,14 @@ class PoiTheme(Base):
         default=str(uuid.uuid4()),
         index=True)
     NAME: Mapped[str] = Column(String(30), unique=True)
+    CATEGORY: Mapped[str] = Column(String(50), default='')
     POIS: Mapped[List['Poi']] = relationship(
         'Poi',
         secondary=association_PoiTheme_Poi,
         back_populates='POI_THEMES')
 
     def __repr__(self) -> str:
-        return f"PoiTheme(UUID={self.UUID!r}, NAME={self.NAME!r})"
+        return f"PoiTheme(UUID={self.UUID!r}, NAME={self.NAME!r}, CATEGORY={self.CATEGORY!r})"
     
     def __init__(self, NAME):
         self.UUID = str(uuid.uuid4())
