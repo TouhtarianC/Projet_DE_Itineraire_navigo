@@ -245,7 +245,7 @@ def get_poi_categories_of_type() -> list:
     session = maria_connect()
     poi_type_categories = set()
     try:
-        res = session.query(PoiType).all()
+        res = session.query(PoiType).filter(PoiType.CATEGORY != 'Other').all()
         # logger.info(f"res = {res}")
         for t in res:
             poi_type_categories.add(t.CATEGORY)
@@ -274,7 +274,7 @@ def get_poi_categories_of_theme() -> list:
     session = maria_connect()
     poi_theme_categories = set()
     try:
-        res = session.query(PoiTheme).all()
+        res = session.query(PoiTheme).filter(PoiTheme.CATEGORY != 'Other').all()
         for t in res:
             poi_theme_categories.add(t.CATEGORY)
     except Exception as e:
