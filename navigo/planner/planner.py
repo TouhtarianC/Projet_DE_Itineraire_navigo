@@ -43,19 +43,20 @@ def _plan_trip(_user_input: UserData, internal_nodes_data: InternalNodesData, _e
     _, selected_restaurant, selected_hosting, selected_trail, selected_toilets = internal_nodes_data.get_sorted_points()
 
     # Step 6: compute itinary for each days
+    # itinerary, selected_toilets = compute_itinerary(
+    #     first_poi, selected_poi,
+    #     selected_restaurant[:max_restaurants],
+    #     selected_hosting[:max_hostings],
+    #     selected_trail[:max_trails],
+    #     selected_toilets
+    #     )
     itinerary, selected_toilets = compute_itinerary(
         first_poi, selected_poi,
-        selected_restaurant[:max_restaurants],
-        selected_hosting[:max_hostings],
-        selected_trail[:max_trails],
+        selected_restaurant,
+        selected_hosting,
+        selected_trail,
         selected_toilets
         )
-    # itinerary = compute_itinerary(
-    #     first_poi, selected_poi,
-    #     selected_restaurant,
-    #     selected_hosting,
-    #     selected_trail
-    #     )
     # after this step, itinerary is composed of POI, Restaurants, Hostings and Trails List where day and rank are used to map by day, as the order rank) 
 
     return itinerary, selected_toilets

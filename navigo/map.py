@@ -75,7 +75,7 @@ def add_points_to_figure(fig, df, filter_name=None):
     
     
     for i, point in df.iterrows():
-        logger.info(f"Point {i} : {point['name']}")
+        # logger.info(f"Point {i} : {point['name']}")
         if filter_name and point['name'] != filter_name:
             continue
                                 
