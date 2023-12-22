@@ -54,6 +54,12 @@ class POI(GeospatialPoint):
     type_list: List[str] = None
     theme_list: List[str] = None
 
+    def __copy__(self):
+        return POI(self.longitude, self.latitude, self.city,
+                   self.city_code, self.type, self.name,
+                   self.category, self.notation, self.score,
+                   self.uuid, self.cluster, self.type_list, self.theme_list)
+
 
 def db_raw_to_poi(db_raw: Poi) -> POI:
     # connect to mongodb
@@ -95,6 +101,12 @@ def db_raw_to_poi(db_raw: Poi) -> POI:
 class Restaurant(GeospatialPoint):
     type: str = "Restaurant"
 
+    def __copy__(self):
+        return Restaurant(self.longitude, self.latitude, self.city,
+                          self.city_code, self.type, self.name,
+                          self.category, self.notation, self.score,
+                          self.uuid, self.cluster)
+
 
 def db_raw_to_restaurant(db_raw: dict) -> Restaurant:
     with GraphDatabase.driver(NEO4J_URI,
@@ -121,6 +133,12 @@ def db_raw_to_restaurant(db_raw: dict) -> Restaurant:
 class Hosting(GeospatialPoint):
     type: str = "Hosting"
 
+    def __copy__(self):
+        return Hosting(self.longitude, self.latitude, self.city,
+                       self.city_code, self.type, self.name,
+                       self.category, self.notation, self.score,
+                       self.uuid, self.cluster)
+
 
 def db_raw_to_hosting(db_raw: dict) -> Hosting:
     with GraphDatabase.driver(NEO4J_URI,
@@ -146,6 +164,12 @@ def db_raw_to_hosting(db_raw: dict) -> Hosting:
 @dataclass
 class Trail(GeospatialPoint):
     type: str = "Trail"
+
+    def __copy__(self):
+        return Trail(self.longitude, self.latitude, self.city,
+                     self.city_code, self.type, self.name,
+                     self.category, self.notation, self.score,
+                     self.uuid, self.cluster)
 
 
 def db_raw_to_trail(db_raw: dict) -> Trail:
@@ -179,6 +203,12 @@ def db_raw_to_trail(db_raw: dict) -> Trail:
 class WC(GeospatialPoint):
     type: str = "POI"
     name: str = "WC"
+
+    def __copy__(self):
+        return WC(self.longitude, self.latitude, self.city,
+                  self.city_code, self.type, self.name,
+                  self.category, self.notation, self.score,
+                  self.uuid, self.cluster)
 
 
 def db_raw_to_wc(db_raw: dict) -> WC:
