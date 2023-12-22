@@ -199,10 +199,17 @@ def get_most_popular_restaurant_by_zone(
 
 def get_external_data(zone: int,
                       trip_start: str,
-                      trip_duration: int) -> ExternalData:
+                      trip_duration: int,
+                      sensitivity_to_weather: bool) -> ExternalData:
+    if sensitivity_to_weather:
+        return ExternalData(
+            weather_forecast=get_weather_forecast_by_zone(
+                zone, trip_start, trip_duration),
+            top_poi_list=get_most_popular_poi_by_zone(zone),
+            top_restaurant_list=get_most_popular_restaurant_by_zone(zone)
+        )
     return ExternalData(
-        weather_forecast=get_weather_forecast_by_zone(
-            zone, trip_start, trip_duration),
+        weather_forecast=None,
         top_poi_list=get_most_popular_poi_by_zone(zone),
         top_restaurant_list=get_most_popular_restaurant_by_zone(zone)
     )
