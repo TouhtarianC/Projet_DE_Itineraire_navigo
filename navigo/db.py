@@ -67,7 +67,7 @@ def get_poi_by_zone(zone: int, rayon: int, days: int = 1) -> (list, list):
         logger.info(
             f"running iteration {iteration} to fetch POI with radius: {radius}")
 
-        l_postal_code = get_nearby_communes_as_where_clause(zone, rayon)
+        l_postal_code = get_nearby_communes_as_where_clause(zone, radius)
         # logger.info(f"l_postal_code = {l_postal_code}")
         try:
             poi_list = session.query(Poi).filter(
