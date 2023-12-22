@@ -5,17 +5,19 @@ from sqlalchemy_utils import database_exists
 from sqlalchemy.orm import Session
 from navigo.external import get_nearby_communes
 from navigo.planner.models_DB_ORM import Poi, Trail, PoiType, PoiTheme
-from navigo.planner.models import InternalNodesData, db_raw_to_poi, db_raw_to_restaurant, db_raw_to_hosting, \
-    db_raw_to_trail, db_raw_to_wc
-from navigo.settings import MARIADB_USER, MARIADB_PWD, MARIADB_HOST, MARIADB_DB, MARIADB_POI_TABLE, \
-    MARIADB_RESTAURANT_TABLE, MARIADB_HOSTING_TABLE, MARIADB_TRAIL_TABLE, MARIADB_WC_TABLE, \
-    MIN_FETCHED_POI_BY_ZONE_PER_DAY, MAX_LOOKUP_ITERATIONS_FOR_POINTS, \
-    LOOKUP_ITERATIONS_RADIUS_STEP, MIN_FETCHED_RESTAURANT_BY_ZONE_PER_DAY, MIN_FETCHED_HOSTING_BY_ZONE_PER_DAY, \
-    MIN_FETCHED_TRAIL_BY_ZONE_PER_DAY, MIN_FETCHED_WC_BY_ZONE_PER_DAY, MARIADB_POI_TYPE_TABLE, MARIADB_POI_THEME_TABLE
+from navigo.planner.models import InternalNodesData, db_raw_to_poi, \
+    db_raw_to_restaurant, db_raw_to_hosting, db_raw_to_trail, db_raw_to_wc
+from navigo.settings import MARIADB_USER, MARIADB_PWD, MARIADB_HOST, \
+    MARIADB_DB, MARIADB_RESTAURANT_TABLE, MARIADB_HOSTING_TABLE, \
+    MARIADB_WC_TABLE, MIN_FETCHED_POI_BY_ZONE_PER_DAY, \
+    MAX_LOOKUP_ITERATIONS_FOR_POINTS, LOOKUP_ITERATIONS_RADIUS_STEP, \
+    MIN_FETCHED_RESTAURANT_BY_ZONE_PER_DAY, \
+    MIN_FETCHED_HOSTING_BY_ZONE_PER_DAY, MIN_FETCHED_TRAIL_BY_ZONE_PER_DAY
 
 logger = logging.getLogger(__name__)
 
 SQLALCHEMY_DATABASE_URI = f'mysql+pymysql://{MARIADB_USER}:{MARIADB_PWD}@{MARIADB_HOST}/{MARIADB_DB}'
+
 
 class DBManagerException(Exception):
     pass
@@ -39,39 +41,7 @@ def get_nearby_communes_as_where_clause(postal_code, rayon=10) -> str:
     logger.info(f"restricting search in following communes: {res}")
     return res
 
-# def get_nearby_communes_by_zone(zone: int, rayon: int, days: int = 1) -> str:
-#     """
-#     this function is used to find a list of postal codes, and will be used the same for
-#     finding POIs, Restaurants, Hostings and Trails
-#     """
-#     iteration = 0
-#     poi_list = []
-#     min_nb_POI = MIN_FETCHED_POI_BY_ZONE_PER_DAY * days
 
-#     session = maria_connect()
-
-#     while iteration < MAX_LOOKUP_ITERATIONS_FOR_POINTS and \
-#             len(poi_list) < min_nb_POI:
-
-#         radius = rayon + iteration * LOOKUP_ITERATIONS_RADIUS_STEP
-#         logger.info(
-#             f"running iteration {iteration} to fetch POI with radius: {radius}")
-
-#         l_postal_code = get_nearby_communes_as_where_clause(zone, radius)
-#         try:
-#             poi_list = session.query(Poi).filter(
-#                 Poi.POSTAL_CODE.in_(l_postal_code[1:-1].split(','))).limit(min_nb_POI * 3).all()
-#         except Exception as e:
-#             logger.error(f"error while fetching POI in nearby_communes: {e}")
-
-#         iteration += 1
-
-#     if poi_list != []:
-#         return l_postal_code
-#     else:
-#         return None
-
-# Connect to MariaDB
 def maria_connect(URL=SQLALCHEMY_DATABASE_URI) -> Session:
     engine = create_engine(URL, echo=False)
     if not database_exists(engine.url):
@@ -82,7 +52,8 @@ def maria_connect(URL=SQLALCHEMY_DATABASE_URI) -> Session:
 
 
 def get_poi_by_zone(zone: int, rayon: int, days: int = 1) -> (list, list):
-    """function that return a list of POI and a list of postal codes where POI are located"""
+    """function that return a list of POI and a list of postal codes
+    where POI are located"""
     iteration = 0
     poi_list = []
     min_nb_POI = MIN_FETCHED_POI_BY_ZONE_PER_DAY * days
@@ -100,7 +71,9 @@ def get_poi_by_zone(zone: int, rayon: int, days: int = 1) -> (list, list):
         # logger.info(f"l_postal_code = {l_postal_code}")
         try:
             poi_list = session.query(Poi).filter(
-                Poi.POSTAL_CODE.in_(l_postal_code[1:-1].split(','))).limit(min_nb_POI * 3).all()
+                Poi.POSTAL_CODE.in_(
+                    l_postal_code[1:-1].split(','))).limit(
+                        min_nb_POI * 3).all()
         except Exception as e:
             logger.error(f"error while fetching POI: {e}")
             session.close()
@@ -115,7 +88,7 @@ def get_poi_by_zone(zone: int, rayon: int, days: int = 1) -> (list, list):
     else:
         session.close()
         return [], []
-    
+
 
 def get_restaurants_by_zone(l_postal_code: list, days: int = 1) -> list:
     restaurant_list = []
@@ -126,8 +99,7 @@ def get_restaurants_by_zone(l_postal_code: list, days: int = 1) -> list:
         query = text(
             f"""
             SELECT * FROM {MARIADB_RESTAURANT_TABLE} WHERE POSTAL_CODE in
-            {l_postal_code} 
-            LIMIT {min_nb_restau * 3 }
+            {l_postal_code} LIMIT {min_nb_restau * 3 }
             """
         )
         try:
@@ -139,7 +111,6 @@ def get_restaurants_by_zone(l_postal_code: list, days: int = 1) -> list:
     logger.info(f"number of Restaurants find = {len(restaurant_list)}")
 
     restaurant_list = [db_raw_to_restaurant(x) for x in restaurant_list]
-    # logger.info(f"identified restaurants: {json.dumps(restaurant_list, indent=4)}")
     # logger.info(f"identified restaurants: {restaurant_list}")
     return restaurant_list
 
@@ -153,8 +124,7 @@ def get_hosting_by_zone(l_postal_code: list, days: int = 1) -> list:
         query = text(
             f"""
                 SELECT * FROM {MARIADB_HOSTING_TABLE} WHERE POSTAL_CODE in
-            {l_postal_code} 
-            LIMIT {min_nb_hosting * 3 }
+            {l_postal_code} LIMIT {min_nb_hosting * 3 }
             """
         )
         try:
@@ -178,11 +148,12 @@ def get_trails_by_zone(l_postal_code: list, days: int = 1) -> list:
 
     try:
         trail_list = session.query(Trail).filter(
-            Trail.POSTAL_CODE.in_(l_postal_code[1:-1].split(','))).limit(min_nb_trail * 3).all()
+            Trail.POSTAL_CODE.in_(
+                l_postal_code[1:-1].split(','))).limit(
+                    min_nb_trail * 3).all()
     except Exception as e:
         logger.error(f"error while fetching Trail: {e}")
         session.close()
-    
 
     if trail_list != []:
         trail_list = [db_raw_to_trail(x) for x in trail_list]
@@ -201,7 +172,7 @@ def get_wc_by_zone(l_postal_code: list, days: int = 1) -> list:
         query = text(
             f"""
                 SELECT * FROM {MARIADB_WC_TABLE} WHERE POSTAL_CODE in
-                {l_postal_code} 
+                {l_postal_code}
             """
         )
         wc_list = con.execute(query)
@@ -213,7 +184,9 @@ def get_wc_by_zone(l_postal_code: list, days: int = 1) -> list:
     return wc_list
 
 
-def get_db_internal_nodes_data_by_zone(zone: int, rayon: int, days: int = 1) -> InternalNodesData:
+def get_db_internal_nodes_data_by_zone(zone: int,
+                                       rayon: int,
+                                       days: int = 1) -> InternalNodesData:
     poi_list, l_postal_code = get_poi_by_zone(zone, rayon, days)
 
     return InternalNodesData(
@@ -273,13 +246,14 @@ def get_poi_categories_of_theme() -> list:
     session = maria_connect()
     poi_theme_categories = set()
     try:
-        res = session.query(PoiTheme).filter(PoiTheme.CATEGORY != 'Other').all()
+        res = session.query(PoiTheme).filter(
+            PoiTheme.CATEGORY != 'Other').all()
         for t in res:
             poi_theme_categories.add(t.CATEGORY)
     except Exception as e:
-            logger.error(f"error while fetching categories of POI themes: {e}")
+        logger.error(f"error while fetching categories of POI themes: {e}")
     # logger.info(f"poi_theme_categories = {poi_theme_categories}")
-    finally:    
+    finally:
         session.close()
 
     return list(poi_theme_categories)

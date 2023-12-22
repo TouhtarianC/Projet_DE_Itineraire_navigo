@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch
 from navigo.planner.models import POI, Restaurant, Hosting, Trail, WC
 
-from navigo.app.main import app, get_poi_by_zone
+from navigo.app.main import app
 from faker import Faker
 
 client = TestClient(app)
@@ -29,7 +29,9 @@ for _ in range(100):
         'cluster': None,
         'day': None,
         'rank': None,
-        "type_list": ["PlaceOfInterest","InterpretationCentre","CulturalSite","PointOfInterest","schema:LocalBusiness"],
+        "type_list": ["PlaceOfInterest", "InterpretationCentre",
+                      "CulturalSite", "PointOfInterest",
+                      "schema:LocalBusiness"],
         "theme_list": ["InTown"]
     }
     mock_POIs.append(POI(**poi))
@@ -72,7 +74,8 @@ def test_get_pois():
         mock_get_poi_by_zone.assert_called_once_with(12345, 10)
 
         # closed mock of BDD
-        mock_get_poi_by_zone.return_value = None  # Simule une base de données vide
+        # Simule une base de données vide
+        mock_get_poi_by_zone.return_value = None
         mock_get_poi_by_zone.reset_mock()  # Réinitialise l'appel précédent
         assert client.get(
             "/data/pois?zip_code=12345&rayon=10").status_code == 404
@@ -138,13 +141,14 @@ for _ in range(100):
 
 def test_get_restaurants_with_non_int_params():
     # mock get_restaurants_by_zone to be independant to BDD
-    with patch("navigo.app.main.get_restaurants_by_zone") as mock_get_restaurants_by_zone:
+    with patch("navigo.app.main.get_restaurants_by_zone") \
+            as mock_get_restaurants_by_zone:
         mock_get_restaurants_by_zone.return_value = mock_restaurants
-        
+
         response = client.get("/data/restaurants?zip_code=balbla&rayon=10")
         # check results
         assert response.status_code == 500
-        
+
         response = client.get("/data/restaurants?zip_code=1234&rayon=bou")
         # check results
         assert response.status_code == 500
@@ -153,7 +157,8 @@ def test_get_restaurants_with_non_int_params():
 # check get_restaurants
 def test_get_restaurants():
     # mock get_restaurants_by_zone to be independant to BDD
-    with patch("navigo.app.main.get_restaurants_by_zone") as mock_get_restaurants_by_zone:
+    with patch("navigo.app.main.get_restaurants_by_zone")\
+            as mock_get_restaurants_by_zone:
         mock_get_restaurants_by_zone.return_value = mock_restaurants
 
         # call get_restaurants with mocked db
@@ -176,7 +181,8 @@ def test_get_restaurants():
         # closed mock of BDD
         # Simule une base de données vide
         mock_get_restaurants_by_zone.return_value = None
-        mock_get_restaurants_by_zone.reset_mock()  # Réinitialise l'appel précédent
+        # Réinitialise l'appel précédent
+        mock_get_restaurants_by_zone.reset_mock()
         assert client.get(
             "/data/restaurants?zip_code=12345&rayon=10").status_code == 404
 
@@ -207,7 +213,8 @@ for _ in range(100):
 
 def test_get_hostings_with_non_int_params():
     # mock get_hostings_by_zone to be independant to BDD
-    with patch("navigo.app.main.get_hosting_by_zone") as mock_get_hosting_by_zone:
+    with patch("navigo.app.main.get_hosting_by_zone")\
+            as mock_get_hosting_by_zone:
         mock_get_hosting_by_zone.return_value = mock_hostings
 
         response = client.get("/data/hostings?zip_code=balbla&rayon=10")
@@ -221,7 +228,8 @@ def test_get_hostings_with_non_int_params():
 # check get_hostings
 def test_get_hostings():
     # mock get_hostings_by_zone to be independant to BDD
-    with patch("navigo.app.main.get_hosting_by_zone") as mock_get_hosting_by_zone:
+    with patch("navigo.app.main.get_hosting_by_zone")\
+            as mock_get_hosting_by_zone:
         mock_get_hosting_by_zone.return_value = mock_hostings
 
         # call get_hostings with mocked db
@@ -242,7 +250,7 @@ def test_get_hostings():
         mock_get_hosting_by_zone.assert_called_once_with(12345, 10)
 
         # closed mock of BDD
-        mock_get_hosting_by_zone.return_value = None  # Simule une base de données vide
+        mock_get_hosting_by_zone.return_value = None
         mock_get_hosting_by_zone.reset_mock()  # Réinitialise l'appel précédent
         assert client.get(
             "/data/hostings?zip_code=12345&rayon=10").status_code == 404
@@ -274,7 +282,8 @@ for _ in range(100):
 
 def test_get_trails_with_non_int_params():
     # mock get_trails_by_zone to be independant to BDD
-    with patch("navigo.app.main.get_trails_by_zone") as mock_get_trails_by_zone:
+    with patch("navigo.app.main.get_trails_by_zone")\
+            as mock_get_trails_by_zone:
         mock_get_trails_by_zone.return_value = mock_trails
 
         response = client.get("/data/trails?zip_code=balbla&rayon=10")
@@ -288,7 +297,8 @@ def test_get_trails_with_non_int_params():
 # check get_trails
 def test_get_trails():
     # mock get_trails_by_zone to be independant to BDD
-    with patch("navigo.app.main.get_trails_by_zone") as mock_get_trails_by_zone:
+    with patch("navigo.app.main.get_trails_by_zone")\
+            as mock_get_trails_by_zone:
         mock_get_trails_by_zone.return_value = mock_trails
 
         # call get_trails with mocked db
@@ -309,7 +319,7 @@ def test_get_trails():
         mock_get_trails_by_zone.assert_called_once_with(12345, 10)
 
         # closed mock of BDD
-        mock_get_trails_by_zone.return_value = None  # Simule une base de données vide
+        mock_get_trails_by_zone.return_value = None
         mock_get_trails_by_zone.reset_mock()  # Réinitialise l'appel précédent
         assert client.get(
             "/data/trails?zip_code=12345&rayon=10").status_code == 404
@@ -377,7 +387,7 @@ def test_get_wcs():
         mock_get_wc_by_zone.assert_called_once_with(12345, 10)
 
         # closed mock of BDD
-        mock_get_wc_by_zone.return_value = None  # Simule une base de données vide
+        mock_get_wc_by_zone.return_value = None
         mock_get_wc_by_zone.reset_mock()  # Réinitialise l'appel précédent
         assert client.get(
             "/data/WCs?zip_code=12345&rayon=10").status_code == 404
