@@ -54,10 +54,12 @@ async def get_home(request: Request):
         rest_types = get_restaurants_types()
         hosting_types = get_hostings_types()
         logger.info(
-            f"""Serving form with categories of types = ({types_agg})
+            f"""
+            Serving form with categories of types = ({types_agg})
             Serving form with categories of themes = ({themes_agg})
             Serving form with rest_types = ({[t['TYPE'] for t in rest_types]})
-            Serving form with hosting_types = ({[t['TYPE'] for t in hosting_types]})""")
+            Serving form with hosting_types = (
+                {[t['TYPE'] for t in hosting_types]})""")
     except Exception as e:
         msg = f"unable to fetch themes and/or types: {str(e)}"
         logger.error(msg)
@@ -94,22 +96,26 @@ class UserTripRequestInput(BaseModel):
             _trip_zone = int(self.trip_zone)
         except ValueError:
             _trip_zone = get_zipcode(self.trip_zone)
-        
-        try: 
-            # transform from a request of a list of categories to a list of types (or themes)
-            # it will allowed to stay with a list of poi types and a list of poi themes
-            # for the UserData
+
+        try:
+            # transform from a request of a list of categories to a list
+            # of types (or themes) it will allowed to stay with a list
+            # of poi types and a list of poi themes for the UserData
             poi_type_list = get_poi_types()
+            # logger.info(f"poi_type_list = {poi_type_list}")
             poi_theme_list = get_poi_themes()
             favorite_poi_type_list, favorite_poi_theme_list = [], []
-            for t in poi_type_list: 
-                if t['CATEGORY'] in self.favorite_category_poi_type_list: 
-                    favorite_poi_type_list.append(t['NAME'])
-            for t in poi_theme_list: 
-                if t['CATEGORY'] in self.favorite_category_poi_theme_list: 
-                    favorite_poi_theme_list.append(t['NAME'])
-        except: 
-            pass
+            for t in poi_type_list:
+                # logger.info(f"t.CATEGORY = {t.CATEGORY}")
+                if t.CATEGORY in self.favorite_category_poi_type_list:
+                    favorite_poi_type_list.append(t.NAME)
+            for t in poi_theme_list:
+                if t.CATEGORY in self.favorite_category_poi_theme_list:
+                    favorite_poi_theme_list.append(t.NAME)
+        except Exception as e:
+            logger.error(e)
+        logger.info(f"favorite_poi_type_list = {favorite_poi_type_list}")
+        logger.info(f"favorite_poi_theme_list = {favorite_poi_theme_list}")
 
         return UserData(
             trip_zone=_trip_zone,
@@ -127,13 +133,15 @@ class UserTripRequestInput(BaseModel):
 
 # POST endpoint to get recommendations
 @app.post("/recommendations/")
-async def create_trip_recommendations(user_request_input: UserTripRequestInput):
+async def create_trip_recommendations(
+        user_request_input: UserTripRequestInput):
     try:
         logger.info(f"""received planning request: {json.dumps(
             user_request_input.model_dump(),
             indent=4)}""")
 
-        geospatial_point_list, selected_toilets = plan_trip(user_request_input.to_user_data())
+        geospatial_point_list, selected_toilets = plan_trip(
+            user_request_input.to_user_data())
 
         # logger.info(f"result: {geospatial_point_list}")
 
@@ -310,7 +318,8 @@ async def get_wcs(
 
 
 def main():
-    uvicorn.run("navigo.app.main:app", host="0.0.0.0", port=8000, log_level="info")
+    uvicorn.run("navigo.app.main:app", host="0.0.0.0",
+                port=8000, log_level="info")
 
 
 if __name__ == "__main__":
