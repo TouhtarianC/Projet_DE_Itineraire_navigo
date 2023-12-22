@@ -1,4 +1,4 @@
-from navigo.db import get_db_internal_nodes_data_by_zone, get_poi_types, get_poi_themes
+from navigo.db import get_db_internal_nodes_data_by_zone
 from navigo.external import get_external_data
 from navigo.itinerary import compute_itinerary
 from navigo.planner.models import UserData, InternalNodesData, ExternalData
@@ -8,7 +8,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def _plan_trip(_user_input: UserData, internal_nodes_data: InternalNodesData, _external_data: ExternalData):
+
+def _plan_trip(_user_input: UserData,
+               internal_nodes_data: InternalNodesData,
+               _external_data: ExternalData):
 
     logger.info("start planning trip")
     # Step 3: Scoring nodes based on user criteria
@@ -23,13 +26,13 @@ def _plan_trip(_user_input: UserData, internal_nodes_data: InternalNodesData, _e
 
     # Step 4: Divided nodes by travelling  days (clustering)
     clustering_by_days(_user_input.trip_duration, internal_nodes_data.poi_list)
-    logger.info(f"clustering done")
+    logger.info("clustering done")
 
     # Step 4: Compute the maximum points that can be visited
     max_points_by_day = 4
-    max_restaurants = 2 * _user_input.trip_duration
-    max_hostings = 1 * _user_input.trip_duration
-    max_trails = 2 * _user_input.trip_duration
+    # max_restaurants = 2 * _user_input.trip_duration
+    # max_hostings = 1 * _user_input.trip_duration
+    # max_trails = 2 * _user_input.trip_duration
 
     # Step 5: Selection of top ones
     selected_poi = internal_nodes_data.select_top_points_by_day(
@@ -40,7 +43,9 @@ def _plan_trip(_user_input: UserData, internal_nodes_data: InternalNodesData, _e
     first_poi = sorted(selected_poi, key=lambda x: x.score, reverse=True)[0]
     logger.info(f"first_POI = {first_poi}")
 
-    _, selected_restaurant, selected_hosting, selected_trail, selected_toilets = internal_nodes_data.get_sorted_points()
+    _, selected_restaurant, \
+        selected_hosting, selected_trail, \
+        selected_toilets = internal_nodes_data.get_sorted_points()
 
     # Step 6: compute itinary for each days
     # itinerary, selected_toilets = compute_itinerary(
@@ -56,24 +61,25 @@ def _plan_trip(_user_input: UserData, internal_nodes_data: InternalNodesData, _e
         selected_hosting,
         selected_trail,
         selected_toilets
-        )
-    # after this step, itinerary is composed of POI, Restaurants, Hostings and Trails List where day and rank are used to map by day, as the order rank) 
+    )
+    # after this step, itinerary is composed of POI, Restaurants, Hostings,
+    # Trails List where day and rank are used to map by day, as the order rank)
 
     return itinerary, selected_toilets
 
 
 def plan_trip(_user_input: UserData):
 
-    # Step 1: Geographic Selection of POI, Restaurant, Hosting, and Trail
-    # if _user_input.means_of_transport == 'by foot':
-    #     rayon = 5
-    # else:
     rayon = 10
-    # internal_nodes_data = get_db_internal_nodes_data_by_zone(_user_input.trip_zone, rayon)
-    internal_nodes_data = get_db_internal_nodes_data_by_zone(_user_input.trip_zone, rayon, _user_input.trip_duration)
+    internal_nodes_data = get_db_internal_nodes_data_by_zone(
+        _user_input.trip_zone, rayon, _user_input.trip_duration)
 
     # Step 2: Fetch needed external Data
-    _external_data = get_external_data(_user_input.trip_zone, _user_input.trip_start, _user_input.trip_duration, _user_input.sensitivity_to_weather)
+    _external_data = get_external_data(
+        _user_input.trip_zone,
+        _user_input.trip_start,
+        _user_input.trip_duration,
+        _user_input.sensitivity_to_weather)
 
     return _plan_trip(_user_input, internal_nodes_data, _external_data)
 
@@ -81,7 +87,7 @@ def plan_trip(_user_input: UserData):
 # Usage example with custom weights:
 
 if __name__ == "__main__":
-    # Provide the necessary input data 
+    # Provide the necessary input data
     _user_input = UserData(
         favorite_poi_type_list=["museum", "park", "historical"],
         favorite_restaurant_categories=["italian", "asian"],
@@ -101,5 +107,3 @@ if __name__ == "__main__":
     )
 
     res_itinerary = plan_trip(_user_input)
-
-    #user_input, internal_nodes_data, external_nodes_data = _plan_trip(user_input, internal_data, external_data)

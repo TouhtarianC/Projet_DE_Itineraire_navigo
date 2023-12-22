@@ -21,7 +21,9 @@ class PagedResponseSchema(BaseModel, Generic[T]):
     results: List[T]
 
 
-def paginate(page_params: PageParams, result_list, ResponseSchema: BaseModel) -> PagedResponseSchema[T]:
+def paginate(page_params: PageParams,
+             result_list,
+             ResponseSchema: BaseModel) -> PagedResponseSchema[T]:
     """Paginate the response."""
     first_el = (page_params.page-1) * page_params.size
     last_el = (page_params.page) * page_params.size

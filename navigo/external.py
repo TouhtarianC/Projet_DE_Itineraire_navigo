@@ -119,9 +119,7 @@ def get_weather_forecast_by_zone(zone: int,
 
 def explore_venues(city_name, category_id, limit, radius) -> list:
     client = requests.Session()
-    # client.headers['Authorization'] = FOURESQUARE_API_TOKEN
-    # # add 'Accept-Language': 'fr' into header of request to get french results
-    # client.headers['Accept-Language'] = 'fr'
+    # add 'Accept-Language': 'fr' into header of request to get french results
 
     response = client.get(
         FOURESQUARE_API_URL,

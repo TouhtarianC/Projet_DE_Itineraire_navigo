@@ -1,9 +1,11 @@
 from dataclasses import dataclass, field
 from pymongo import MongoClient
 from neo4j import GraphDatabase
-from navigo.settings import MONGODB_URI, MONGODB_DB, MONGODB_POI_COLLECTION, NEO4J_URI, NEO4J_USER, NEO4J_PWD
+from navigo.settings import MONGODB_URI, MONGODB_DB, MONGODB_POI_COLLECTION, \
+    NEO4J_URI, NEO4J_USER, NEO4J_PWD
 from navigo.planner.models_DB_ORM import Poi
 from typing import List
+
 
 @dataclass
 class GeospatialPoint:
@@ -25,24 +27,25 @@ class GeospatialPoint:
     day: int | None = None
     rank: int | None = None
 
-    def __init__(self, longitude, latitude, city, city_code, type, name, 
+    def __init__(self, longitude, latitude, city, city_code, type, name,
                  category, notation, score, uuid, cluster):
         self.longitude = longitude
         self.latitude = latitude
         self.city = city
         self.city_code = city_code
-        self.type = type 
+        self.type = type
         self.name = name
         self.category = category
         self.notation = notation
         self.score = score
         self.uuid = uuid
         self.cluster = cluster
-    
+
     def __copy__(self):
-        return GeospatialPoint(self.longitude, self.latitude, self.city, 
-                               self.city_code, self.type, self.name, self.category, self.notation, 
-                               self.score, self.uuid, self.cluster)
+        return GeospatialPoint(self.longitude, self.latitude, self.city,
+                               self.city_code, self.type, self.name,
+                               self.category, self.notation, self.score,
+                               self.uuid, self.cluster)
 
 
 @dataclass
@@ -50,40 +53,42 @@ class POI(GeospatialPoint):
     type: str = "POI"
     type_list: List[str] = None
     theme_list: List[str] = None
-    
+
 
 def db_raw_to_poi(db_raw: Poi) -> POI:
     # connect to mongodb
     collection = MongoClient(MONGODB_URI)[
-            MONGODB_DB][MONGODB_POI_COLLECTION]
-    
+        MONGODB_DB][MONGODB_POI_COLLECTION]
+
     document = collection.find_one({'UUID': db_raw.UUID})
     if document:
         # connect to neo4j
-        with GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD)) as driver:
+        with GraphDatabase.driver(NEO4J_URI,
+                                  auth=(NEO4J_USER, NEO4J_PWD)) as driver:
             with driver.session() as session:
                 query = (
                     f"MATCH (n) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
                 )
                 result = session.run(query).data()
         if result:
-            # add list of poi types and list of poi themes (it can be several types)
-            type_list, theme_list=[], []
+            # add list of poi types and list of poi themes
+            # (it can be several types)
+            type_list, theme_list = [], []
             for poi_type in db_raw.POI_TYPES:
                 type_list.append(poi_type.NAME)
             for poi_theme in db_raw.POI_THEMES:
                 theme_list.append(poi_theme.NAME)
-            
+
             return POI(
-                    name=document['LABEL']['fr'],
-                    city=db_raw.CITY,
-                    city_code=db_raw.POSTAL_CODE,
-                    uuid=db_raw.UUID,
-                    latitude=result[0]['n']['LATITUDE'],
-                    longitude=result[0]['n']['LONGITUDE'],
-                    type_list=type_list,
-                    theme_list=theme_list
-                    )
+                name=document['LABEL']['fr'],
+                city=db_raw.CITY,
+                city_code=db_raw.POSTAL_CODE,
+                uuid=db_raw.UUID,
+                latitude=result[0]['n']['LATITUDE'],
+                longitude=result[0]['n']['LONGITUDE'],
+                type_list=type_list,
+                theme_list=theme_list
+            )
 
 
 @dataclass
@@ -92,7 +97,8 @@ class Restaurant(GeospatialPoint):
 
 
 def db_raw_to_restaurant(db_raw: dict) -> Restaurant:
-    with GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD)) as driver:
+    with GraphDatabase.driver(NEO4J_URI,
+                              auth=(NEO4J_USER, NEO4J_PWD)) as driver:
         with driver.session() as session:
             query = (
                 f"MATCH (n:restaurant) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
@@ -108,7 +114,7 @@ def db_raw_to_restaurant(db_raw: dict) -> Restaurant:
             city=db_raw['CITY'],
             city_code=db_raw['POSTAL_CODE'],
             category=db_raw['TYPE'],
-            )
+        )
 
 
 @dataclass
@@ -117,7 +123,8 @@ class Hosting(GeospatialPoint):
 
 
 def db_raw_to_hosting(db_raw: dict) -> Hosting:
-    with GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD)) as driver:
+    with GraphDatabase.driver(NEO4J_URI,
+                              auth=(NEO4J_USER, NEO4J_PWD)) as driver:
         with driver.session() as session:
             query = (
                 f"MATCH (n:hosting) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
@@ -143,13 +150,14 @@ class Trail(GeospatialPoint):
 
 def db_raw_to_trail(db_raw: dict) -> Trail:
     collection = MongoClient(MONGODB_URI)[
-            MONGODB_DB][MONGODB_POI_COLLECTION]
+        MONGODB_DB][MONGODB_POI_COLLECTION]
     # print("connection mongoDB ok")
 
     document = collection.find_one({'UUID': db_raw.UUID})
     if document:
         # connect to neo4j
-        with GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD)) as driver:
+        with GraphDatabase.driver(NEO4J_URI,
+                                  auth=(NEO4J_USER, NEO4J_PWD)) as driver:
             with driver.session() as session:
                 query = (
                     f"MATCH (n) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
@@ -158,13 +166,13 @@ def db_raw_to_trail(db_raw: dict) -> Trail:
                 # print(f"neo4j result for poi.id ({db_raw.id}) = {result}")
         if result:
             return Trail(
-                    name=document['LABEL']['fr'],
-                    city=db_raw.CITY,
-                    city_code=db_raw.POSTAL_CODE,
-                    uuid=db_raw.UUID,
-                    latitude=result[0]['n']['LATITUDE'],
-                    longitude=result[0]['n']['LONGITUDE'],
-                    )
+                name=document['LABEL']['fr'],
+                city=db_raw.CITY,
+                city_code=db_raw.POSTAL_CODE,
+                uuid=db_raw.UUID,
+                latitude=result[0]['n']['LATITUDE'],
+                longitude=result[0]['n']['LONGITUDE'],
+            )
 
 
 @dataclass
@@ -174,14 +182,15 @@ class WC(GeospatialPoint):
 
 
 def db_raw_to_wc(db_raw: dict) -> WC:
-    with GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PWD)) as driver:
+    with GraphDatabase.driver(NEO4J_URI,
+                              auth=(NEO4J_USER, NEO4J_PWD)) as driver:
         with driver.session() as session:
             query = (
                 f"MATCH (n:wc) WHERE n.UUID = '{db_raw.UUID}' RETURN n"
             )
             result = session.run(query).data()
     if result:
-        #print(f"neo4j result for wc ({db_raw.UUID}) = {result}")
+        # print(f"neo4j result for wc ({db_raw.UUID}) = {result}")
         return WC(
             latitude=result[0]['n']['LATITUDE'],
             longitude=result[0]['n']['LONGITUDE'],
@@ -209,7 +218,8 @@ class UserData:
 
 @dataclass
 class ExternalData:
-    weather_forecast: bool  # True if weather is good => boost external activities
+    # True if weather is good => boost external activities
+    weather_forecast: bool
     top_poi_list: list[POI]
     top_restaurant_list: list[Restaurant]
 
@@ -228,19 +238,23 @@ class InternalNodesData:
 
     def get_sorted_points(self):
         try:
-            poi_sorted = sorted(self.poi_list, key=lambda x: x.score, reverse=True)
+            poi_sorted = sorted(
+                self.poi_list, key=lambda x: x.score, reverse=True)
         except AttributeError:
             poi_sorted = []
         try:
-            restaurant_sorted = sorted(self.restaurant_list, key=lambda x: x.score, reverse=True)
+            restaurant_sorted = sorted(
+                self.restaurant_list, key=lambda x: x.score, reverse=True)
         except AttributeError:
             restaurant_sorted = []
         try:
-            hosting_sorted = sorted(self.hosting_list, key=lambda x: x.score, reverse=True)
+            hosting_sorted = sorted(
+                self.hosting_list, key=lambda x: x.score, reverse=True)
         except AttributeError:
             hosting_sorted = []
         try:
-            trail_sorted = sorted(self.trail_list, key=lambda x: x.score, reverse=True)
+            trail_sorted = sorted(
+                self.trail_list, key=lambda x: x.score, reverse=True)
         except AttributeError:
             trail_sorted = []
         return (
