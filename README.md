@@ -41,6 +41,7 @@ Algorithm input are captured from user data and computed external data
 
 ### Step 1: Geographic Selection of POI & Restaurant & Hosting, Trail
 Based on trip zone criteria, get from SQL DB all concerned points 
+User may specify city name or a zip code, either cases, the search of points is based on zip codes
 
 To find close interesting points to the trip zone, we request "villes voisines" API.
 Example:
@@ -52,9 +53,10 @@ Where:
         cp: The postal code of the commune to search for.
         rayon: The search radius in kilometers.
 
-Then based on the returned communes CP, we use it to fetch concerned points from DB
+Then based on the returned communes zip codes, we use it to fetch concerned points from DB
 As result, we have 4 types of SQLAlchemy ORM object lists: POI, Restaurants, Hosting and Trails
 
+The search is iterative, we search in close radius then we increase it to met needed points limit
 
 ### Step 2: Scoring points based on user criteria
 Compute a score for each point 
@@ -62,36 +64,43 @@ Compute a score for each point
 #### scoring function
 
 ##### Input
-3 objects: rules, point, input
+Scoring function takes 3 objects as input: rules (scoring weights), point (POI, Restaurant, ..) to score, user input
 
 ##### Algorithm
-start with a zero score
+start with the default zero score
 
 if point is of type POI: 
-    if category of POI is in the list of favorite categories of POI: 
-        increment score by 10 * (length of list - index of category in list)
+    if the category of POI is in the list of the user favorite categories of POI: 
+        increment score by 'user preference weight' * (length of list - index of category in list)
+        this increments most favorite categories (lower index in list)
 
     if point is present in the list of most popular POI:
-        increment score by 10 * (length of list - index of POI in list)
+        increment score by 'popularity weight' * (length of list - index of POI in list)
+
+    if user is sensitive to the weather:
+        if the weather forecast is good for the trip date and location:
+            if point is of type external activity:
+                 increment score by 'weather weight'
+        
+        else if weather forecast is bad for the trip date and location:
+            if point is of type internal activity:
+                 increment score by 'weather weight'
 
 if point is of type Restaurant: 
-    if category of Restaurant is in the list of favorite categories of Restaurant: 
-        increment score by 10 * (length of list - index of category in list)
+    if the category of Restaurant is in the list of user favorite categories of Restaurant: 
+        increment score by 'user preference weight' * (length of list - index of category in list)
 
     if point is present in the list of most popular Restaurants:
-        increment score by 10 * (length of list - index of Restaurant in list)
+        increment score by 'popularity weight' * (length of list - index of Restaurant in list)
 
 if point is of type Hosting: 
-    if category of Hosting is in the list of favorite categories of Hosting: 
-        increment score by 10 * (length of list - index of category in list)
+    if the category of Hosting is in the list of user favorite categories of Hosting: 
+        increment score by 'user preference weight' * (length of list - index of category in list)
 
 if point has non-zero notation:
     if notation > minimal tolerated notation:
-        increment score by 10 * (notation - minimal tolerated notation) 
+        increment score by 'notation weight' * (notation - minimal tolerated notation) 
 
-if point has city:
-    if city is in weather forecast:
-        increment score by sensitivity to weather * weather notation from weather forecast
 
 return score
 
@@ -121,4 +130,3 @@ choose one Hosting per day (to sleep)
 ### Itinerary display 
 
 Represent the final Itinerary on a Map and display it to the user
-
