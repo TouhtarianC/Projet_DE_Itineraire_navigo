@@ -184,7 +184,7 @@ async def get_pois(
         logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
-    res = get_poi_by_zone(_zip_code, _rayon)
+    res = get_poi_by_zone(_zip_code, _rayon)[0]
     if res is None:
         logger.warning(f"no POI found for zone {_zip_code} \
                        with rayon {_rayon}")
@@ -212,7 +212,7 @@ async def get_restaurants(
         logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
-    res = get_restaurants_by_zone(_zip_code, _rayon)
+    res = get_restaurants_by_zone(f'({str(_zip_code)})', _rayon)
     if res is None:
         logger.warning(f"no Restaurants found for zone {_zip_code} \
                        with rayon {_rayon}")
@@ -241,7 +241,7 @@ async def get_hosting(
         logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
-    res = get_hosting_by_zone(_zip_code, _rayon)
+    res = get_hosting_by_zone(f'({str(_zip_code)})', _rayon)
     if res is None:
         logger.warning(f"no hosting found for zone {_zip_code} \
                        with rayon {_rayon}")
@@ -270,7 +270,7 @@ async def get_trails(
         logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
-    res = get_trails_by_zone(_zip_code, _rayon)
+    res = get_trails_by_zone(f'({str(_zip_code)})', _rayon)
     if res is None:
         logger.warning(f"no trail found for zone {_zip_code} \
                        with rayon {_rayon}")
@@ -299,7 +299,7 @@ async def get_wcs(
         logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
-    res = get_wc_by_zone(_zip_code, _rayon)
+    res = get_wc_by_zone(f'({str(_zip_code)})', _rayon)
     if res is None:
         logger.warning(f"no WC found for zone {_zip_code} \
                        with rayon {_rayon}")
