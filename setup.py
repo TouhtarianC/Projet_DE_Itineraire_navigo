@@ -25,10 +25,10 @@ with open('requirements.txt') as requirements_file:
 setup(
     name='navigo',
     version=VERSION,
-    url='https://gitlab.tech.orange/toscan/raft-core',
+    url='https://github.com/DataScientest-Studio/JAN23_ORANGE_Itineraire_navigo',
     author='SCA',
-    author_email='toscan_team@list2.orange.com',
-    description='Raft Core for sdwan & fast raft services',
+    author_email='navigo@orange.com',
+    description='Navigo',
     long_description=long_description,
     license='Orange',
     python_requires='>=3.10',
